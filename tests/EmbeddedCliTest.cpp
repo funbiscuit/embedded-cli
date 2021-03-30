@@ -26,5 +26,22 @@ TEST_CASE("EmbeddedCli", "[cli]") {
         }
     }
 
+    SECTION("Test sending by parts") {
+        mock.sendStr("set ");
+        embeddedCliProcess(cli);
+        REQUIRE(commands.empty());
+
+        mock.sendStr("led 1");
+        embeddedCliProcess(cli);
+        REQUIRE(commands.empty());
+
+        mock.sendLine(" 1");
+        embeddedCliProcess(cli);
+        REQUIRE(!commands.empty());
+
+        REQUIRE(commands.back().name == "set");
+        REQUIRE(commands.back().args == "led 1 1");
+    }
+
 }
 

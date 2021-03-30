@@ -17,6 +17,12 @@ void CliMock::sendLine(const std::string &line) {
     sendStr(lineEnding);
 }
 
+void CliMock::sendStr(const std::string &str) {
+    for (char c : str) {
+        embeddedCliReceiveChar(cli, c);
+    }
+}
+
 std::vector<CliMock::Command> &CliMock::getReceivedCommands() {
     return rxQueue;
 }
@@ -30,10 +36,4 @@ void CliMock::onCommand(CliCommand *command) {
 
 void CliMock::writeChar(char c) {
     txQueue.push_back(c);
-}
-
-void CliMock::sendStr(const std::string &str) {
-    for (char c : str) {
-        embeddedCliReceiveChar(cli, c);
-    }
 }

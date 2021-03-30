@@ -24,6 +24,12 @@ public:
      */
     void sendLine(const std::string &line);
 
+    /**
+     * Send single line to cli, without line ending
+     * @param line
+     */
+    void sendStr(const std::string &line);
+
     std::vector<Command> &getReceivedCommands();
 
 private:
@@ -44,8 +50,6 @@ private:
     void onCommand(CliCommand *command);
 
     void writeChar(char c);
-
-    void sendStr(const std::string &str);
 };
 
 
