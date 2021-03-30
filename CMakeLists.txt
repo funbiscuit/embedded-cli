@@ -5,4 +5,6 @@ set(CMAKE_C_STANDARD 11)
 
 add_subdirectory(lib)
 
+include(CTest)
 add_subdirectory(tests)
+add_test(CliTests tests/embedded_cli_tests)
