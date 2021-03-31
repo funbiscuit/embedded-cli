@@ -28,8 +28,10 @@ struct CliCommand {
     /**
      * String of arguments of the command.
      * In command "set led 1 1" "led 1 1" is string of arguments
+     * Is ended with double 0x00 char
+     * Use tokenize functions to easily get individual tokens
      */
-    const char *args;
+    char *args;
 };
 
 
@@ -86,6 +88,35 @@ void embeddedCliProcess(EmbeddedCli *cli);
  * @param cli
  */
 void embeddedCliFree(EmbeddedCli *cli);
+
+/**
+ * Perform tokenization of arguments string. Original string is modified and
+ * should not be used directly (only inside other token functions).
+ * Individual tokens are separated by single 0x00 char, double 0x00 is put at
+ * the end of token list. After calling this function, you can use other
+ * token functions to get individual tokens and token count.
+ *
+ * Important: Call this function only once. Otherwise information will be lost if
+ * more than one token existed
+ * @param args - string to tokenize (must have extra writable char after 0x00)
+ * @return
+ */
+void embeddedCliTokenizeArgs(char* args);
+
+/**
+ * Return specific token from tokenized string
+ * @param tokenizedStr
+ * @param pos
+ * @return token
+ */
+const char* embeddedCliGetToken(const char* tokenizedStr, uint8_t pos);
+
+/**
+ * Return number of tokens in tokenized string
+ * @param tokenizedStr
+ * @return number of tokens
+ */
+uint8_t embeddedCliGetTokenCount(const char* tokenizedStr);
 
 #ifdef __cplusplus
 }
