@@ -4,15 +4,15 @@
 
 #ifdef __cplusplus
 
-#include <cstdint>
-
 extern "C" {
 #else
 
-#include <stdint.h>
 #include <stdbool.h>
 
 #endif
+
+// cstdint is available only since C++11, so use C header
+#include <stdint.h>
 
 typedef struct CliCommand CliCommand;
 typedef struct EmbeddedCli EmbeddedCli;
@@ -101,7 +101,7 @@ void embeddedCliFree(EmbeddedCli *cli);
  * @param args - string to tokenize (must have extra writable char after 0x00)
  * @return
  */
-void embeddedCliTokenizeArgs(char* args);
+void embeddedCliTokenizeArgs(char *args);
 
 /**
  * Return specific token from tokenized string
@@ -109,14 +109,14 @@ void embeddedCliTokenizeArgs(char* args);
  * @param pos
  * @return token
  */
-const char* embeddedCliGetToken(const char* tokenizedStr, uint8_t pos);
+const char *embeddedCliGetToken(const char *tokenizedStr, uint8_t pos);
 
 /**
  * Return number of tokens in tokenized string
  * @param tokenizedStr
  * @return number of tokens
  */
-uint8_t embeddedCliGetTokenCount(const char* tokenizedStr);
+uint8_t embeddedCliGetTokenCount(const char *tokenizedStr);
 
 #ifdef __cplusplus
 }

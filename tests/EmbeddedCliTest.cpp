@@ -1,10 +1,8 @@
-#include <random>
-#include <iostream>
-
-#include <catch.hpp>
-
 #include "embedded_cli.h"
 #include "CliMock.h"
+
+#include <catch.hpp>
+#include <cstring>
 
 TEST_CASE("EmbeddedCli", "[cli]") {
     EmbeddedCli *cli = embeddedCliNew();
@@ -145,9 +143,9 @@ TEST_CASE("EmbeddedCli. Tokens", "[cli][token]") {
         const char* tok1 = embeddedCliGetToken(args, 1);
         const char* tok2 = embeddedCliGetToken(args, 2);
 
-        REQUIRE(tok0 != NULL);
-        REQUIRE(tok1 != NULL);
-        REQUIRE(tok2 == NULL);
+        REQUIRE(tok0 != nullptr);
+        REQUIRE(tok1 != nullptr);
+        REQUIRE(tok2 == nullptr);
 
         REQUIRE(std::string(tok0) == "abcd");
         REQUIRE(std::string(tok1) == "efg");
@@ -159,7 +157,7 @@ TEST_CASE("EmbeddedCli. Tokens", "[cli][token]") {
 
         const char* tok0 = embeddedCliGetToken(args, 0);
 
-        REQUIRE(tok0 == NULL);
+        REQUIRE(tok0 == nullptr);
     }
 
     SECTION("Get token count") {
