@@ -6,7 +6,6 @@
 #define PREPARE_IMPL(t) \
   EmbeddedCliImpl* impl = (EmbeddedCliImpl*)t->_impl;
 
-#define RX_BUFFER_SIZE 64
 
 typedef struct EmbeddedCliImpl EmbeddedCliImpl;
 
@@ -15,41 +14,91 @@ struct EmbeddedCliImpl {
      * Buffer for storing received chars. Extra space for extra char that used
      * in tokenization (to indicate end of tokens)
      */
-    char rxBuffer[RX_BUFFER_SIZE + 1];
+    char *rxBuffer;
 
     /**
      * Current size of buffer
      */
     uint16_t rxSize;
+
+    /**
+     * Max size of buffer
+     */
+    uint16_t rxMaxSize;
+
+    bool wasAllocated;
 };
+
+static EmbeddedCliConfig defaultConfig;
 
 static void removeUnfinishedCommand(EmbeddedCli *cli);
 
 static bool isWhitespace(char c);
 
+EmbeddedCliConfig *embeddedCliDefaultConfig(void) {
+    defaultConfig.rxBufferSize = 64;
+    defaultConfig.cliBuffer = NULL;
+    defaultConfig.cliBufferSize = 0;
+    return &defaultConfig;
+}
 
-EmbeddedCli *embeddedCliNew(void) {
-    EmbeddedCli *cli = malloc(sizeof(EmbeddedCli));
+EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
+    EmbeddedCli *cli = NULL;
 
-    if (cli == NULL)
-        return NULL;
-    memset(cli, 0, sizeof(EmbeddedCli));
+    if (config->cliBuffer != NULL) {
+        // allocate memory from provided buffer
+        size_t totalSize = sizeof(EmbeddedCli) + sizeof(EmbeddedCliImpl) +
+                           config->rxBufferSize * sizeof(char);
+        // buffer is not big enough
+        if (config->cliBufferSize < totalSize)
+            return NULL;
 
-    cli->_impl = malloc(sizeof(EmbeddedCliImpl));
-    if (cli->_impl == NULL) {
-        free(cli);
-        return NULL;
+        memset(config->cliBuffer, 0, totalSize);
+
+        cli = (EmbeddedCli *) config->cliBuffer;
+        cli->_impl = (EmbeddedCliImpl *) &config->cliBuffer[sizeof(EmbeddedCli)];
+        PREPARE_IMPL(cli)
+        impl->rxBuffer = (char *) &config->cliBuffer[sizeof(EmbeddedCli) +
+                                                     sizeof(EmbeddedCliImpl)];
+        impl->wasAllocated = false;
+        impl->rxMaxSize = config->rxBufferSize;
+    } else {
+        EmbeddedCli *cliMem = malloc(sizeof(EmbeddedCli));
+        EmbeddedCliImpl *implMem = malloc(sizeof(EmbeddedCliImpl));
+        char *bufMem = malloc(config->rxBufferSize * sizeof(char));
+
+        if (cliMem == NULL || implMem == NULL || bufMem == NULL) {
+            if (cliMem != NULL)
+                free(cliMem);
+            if (implMem != NULL)
+                free(implMem);
+            if (bufMem != NULL)
+                free(bufMem);
+            return NULL;
+        }
+
+        cli = cliMem;
+        memset(cli, 0, sizeof(EmbeddedCli));
+        cli->_impl = implMem;
+        memset(cli->_impl, 0, sizeof(EmbeddedCliImpl));
+        PREPARE_IMPL(cli)
+        impl->rxBuffer = bufMem;
+        impl->wasAllocated = true;
+        impl->rxMaxSize = config->rxBufferSize;
     }
-    memset(cli->_impl, 0, sizeof(EmbeddedCliImpl));
 
     return cli;
+}
+
+EmbeddedCli *embeddedCliNewDefault(void) {
+    return embeddedCliNew(embeddedCliDefaultConfig());
 }
 
 void embeddedCliReceiveChar(EmbeddedCli *cli, char c) {
     PREPARE_IMPL(cli)
 
     // if we can't receive more characters, remove command completely
-    if (impl->rxSize >= RX_BUFFER_SIZE) {
+    if (impl->rxSize + 1 >= impl->rxMaxSize) {
         removeUnfinishedCommand(cli);
         return;
     }
@@ -86,8 +135,8 @@ void embeddedCliProcess(EmbeddedCli *cli) {
             cmdArgs = NULL;
             nameFinished = false;
 
-            if (i + 1 < RX_BUFFER_SIZE)
-                memmove(impl->rxBuffer, &impl->rxBuffer[i + 1], RX_BUFFER_SIZE - i - 1);
+            if (i + 1 < impl->rxMaxSize)
+                memmove(impl->rxBuffer, &impl->rxBuffer[i + 1], impl->rxMaxSize - i - 1);
 
             impl->rxSize -= i + 1;
             i = -1;
@@ -110,8 +159,11 @@ void embeddedCliProcess(EmbeddedCli *cli) {
 }
 
 void embeddedCliFree(EmbeddedCli *cli) {
-    free(cli->_impl);
-    free(cli);
+    PREPARE_IMPL(cli)
+    if (impl->wasAllocated) {
+        free(cli->_impl);
+        free(cli);
+    }
 }
 
 void embeddedCliTokenizeArgs(char *args) {

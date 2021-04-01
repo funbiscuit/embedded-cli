@@ -29,8 +29,8 @@ std::vector<CliMock::Command> &CliMock::getReceivedCommands() {
 
 void CliMock::onCommand(CliCommand *command) {
     Command cmd;
-    cmd.name = command->name;
-    cmd.args = command->args;
+    cmd.name = command->name != nullptr ? command->name : "";
+    cmd.args = command->args != nullptr ? command->args : "";
     rxQueue.push_back(cmd);
 }
 

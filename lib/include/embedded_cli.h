@@ -16,6 +16,7 @@ extern "C" {
 
 typedef struct CliCommand CliCommand;
 typedef struct EmbeddedCli EmbeddedCli;
+typedef struct EmbeddedCliConfig EmbeddedCliConfig;
 
 
 struct CliCommand {
@@ -62,12 +63,54 @@ struct EmbeddedCli {
 };
 
 /**
- * Create new CLI, memory is allocated dynamically, call embeddedCliFree after
- * usage.
+ * Configuration to create CLI
+ */
+struct EmbeddedCliConfig {
+    /**
+     * Size of buffer that is used to store characters until they're processed
+     */
+    uint16_t rxBufferSize;
+
+    /**
+     * Buffer to use for cli and all internal structures. If NULL, memory will
+     * be allocated dynamically. Otherwise this buffer is used and no
+     * allocations are made
+     */
+    uint8_t *cliBuffer;
+
+    /**
+     * Size of buffer for cli and internal structures.
+     */
+    uint16_t cliBufferSize;
+};
+
+/**
+ * Returns pointer to default configuration for cli creation. It is safe to
+ * modify it and then send to embeddedCliNew().
+ * Returned structure is always the same so do not free and try to use it
+ * immediately.
+ * Default values:
+ * -rxBufferSize  = 64
+ * -cliBuffer     = NULL (use dynamic allocation)
+ * -cliBufferSize = 0
+ * @return configuration for cli creation
+ */
+EmbeddedCliConfig *embeddedCliDefaultConfig(void);
+
+/**
+ * Create new CLI.
+ * Memory is allocated dynamically if cliBuffer in config is NULL.
  * After CLI is created, override function pointers to start using it
+ * @param config - config for cli creation
  * @return pointer to created CLI
  */
-EmbeddedCli *embeddedCliNew(void);
+EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config);
+
+/**
+ * Same as calling embeddedCliNew with default config.
+ * @return
+ */
+EmbeddedCli *embeddedCliNewDefault(void);
 
 /**
  * Receive character and put it to internal buffer

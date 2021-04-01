@@ -9,71 +9,38 @@ void setVectorString(std::vector<char> &buffer, const std::string &str) {
     buffer[str.size()] = '\0';
 }
 
+void runTestsForCli(EmbeddedCli *cli);
+
 TEST_CASE("EmbeddedCli", "[cli]") {
-    EmbeddedCli *cli = embeddedCliNew();
+    EmbeddedCli *cli = embeddedCliNewDefault();
 
     REQUIRE(cli != nullptr);
 
-    CliMock mock(cli);
-    auto &commands = mock.getReceivedCommands();
+    runTestsForCli(cli);
 
-    SECTION("Test single command") {
-        for (int i = 0; i < 50; ++i) {
-            mock.sendLine("set led 1 " + std::to_string(i));
+    embeddedCliFree(cli);
+}
 
-            embeddedCliProcess(cli);
+TEST_CASE("EmbeddedCli. Static allocation", "[cli]") {
+    EmbeddedCliConfig *config = embeddedCliDefaultConfig();
 
-            REQUIRE(commands.size() == i + 1);
-            REQUIRE(commands.back().name == "set");
-            REQUIRE(commands.back().args == ("led 1 " + std::to_string(i)));
-        }
+    SECTION("Can't create from small buffer") {
+        std::vector<uint8_t> data(16);
+        config->cliBuffer = data.data();
+        config->cliBufferSize = 16;
+        REQUIRE(embeddedCliNew(config) == NULL);
     }
 
-    SECTION("Test sending by parts") {
-        mock.sendStr("set ");
-        embeddedCliProcess(cli);
-        REQUIRE(commands.empty());
+    std::vector<uint8_t> data(128);
+    config->cliBuffer = data.data();
+    config->cliBufferSize = 128;
+    EmbeddedCli *cli = embeddedCliNew(config);
 
-        mock.sendStr("led 1");
-        embeddedCliProcess(cli);
-        REQUIRE(commands.empty());
+    REQUIRE(cli != nullptr);
 
-        mock.sendLine(" 1");
-        embeddedCliProcess(cli);
-        REQUIRE(!commands.empty());
+    runTestsForCli(cli);
 
-        REQUIRE(commands.back().name == "set");
-        REQUIRE(commands.back().args == "led 1 1");
-    }
-
-    SECTION("Test sending multiple commands") {
-        for (int i = 0; i < 3; ++i) {
-            mock.sendLine("set led 1 " + std::to_string(i));
-        }
-        embeddedCliProcess(cli);
-
-        REQUIRE(commands.size() == 3);
-        for (int i = 0; i < 3; ++i) {
-            REQUIRE(commands[i].name == "set");
-            REQUIRE(commands[i].args == ("led 1 " + std::to_string(i)));
-        }
-    }
-
-    SECTION("Test buffer overflow recovery") {
-        for (int i = 0; i < 100; ++i) {
-            mock.sendLine("set led 1 " + std::to_string(i));
-        }
-        embeddedCliProcess(cli);
-        REQUIRE(commands.size() < 100);
-        commands.clear();
-
-        mock.sendLine("set led 1 150");
-        embeddedCliProcess(cli);
-        REQUIRE(commands.size() == 1);
-        REQUIRE(commands.back().name == "set");
-        REQUIRE(commands.back().args == "led 1 150");
-    }
-
+    embeddedCliFree(cli);
 }
 
 TEST_CASE("EmbeddedCli. Tokens", "[cli][token]") {
@@ -175,5 +142,67 @@ TEST_CASE("EmbeddedCli. Tokens", "[cli][token]") {
         embeddedCliTokenizeArgs(buffer.data());
 
         REQUIRE(embeddedCliGetTokenCount(buffer.data()) == 0);
+    }
+}
+
+void runTestsForCli(EmbeddedCli *cli) {
+    CliMock mock(cli);
+    auto &commands = mock.getReceivedCommands();
+
+    SECTION("Test single command") {
+        for (int i = 0; i < 50; ++i) {
+            mock.sendLine("set led 1 " + std::to_string(i));
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(commands.size() == i + 1);
+            REQUIRE(commands.back().name == "set");
+            REQUIRE(commands.back().args == ("led 1 " + std::to_string(i)));
+        }
+    }
+
+    SECTION("Test sending by parts") {
+        mock.sendStr("set ");
+        embeddedCliProcess(cli);
+        REQUIRE(commands.empty());
+
+        mock.sendStr("led 1");
+        embeddedCliProcess(cli);
+        REQUIRE(commands.empty());
+
+        mock.sendLine(" 1");
+        embeddedCliProcess(cli);
+        REQUIRE(!commands.empty());
+
+        REQUIRE(commands.back().name == "set");
+        REQUIRE(commands.back().args == "led 1 1");
+    }
+
+    SECTION("Test sending multiple commands") {
+        for (int i = 0; i < 3; ++i) {
+            mock.sendLine("set led 1 " + std::to_string(i));
+        }
+        embeddedCliProcess(cli);
+
+        REQUIRE(commands.size() == 3);
+        for (int i = 0; i < 3; ++i) {
+            REQUIRE(commands[i].name == "set");
+            REQUIRE(commands[i].args == ("led 1 " + std::to_string(i)));
+        }
+    }
+
+    SECTION("Test buffer overflow recovery") {
+        for (int i = 0; i < 100; ++i) {
+            mock.sendLine("set led 1 " + std::to_string(i));
+        }
+        embeddedCliProcess(cli);
+        REQUIRE(commands.size() < 100);
+        commands.clear();
+
+        mock.sendLine("set led 1 150");
+        embeddedCliProcess(cli);
+        REQUIRE(commands.size() == 1);
+        REQUIRE(commands.back().name == "set");
+        REQUIRE(commands.back().args == "led 1 150");
     }
 }
