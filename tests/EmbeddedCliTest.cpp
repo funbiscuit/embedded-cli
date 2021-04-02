@@ -105,6 +105,10 @@ TEST_CASE("EmbeddedCli. Tokens", "[cli][token]") {
         REQUIRE(buffer[1] == '\0');
     }
 
+    SECTION("Tokenize null") {
+        embeddedCliTokenizeArgs(nullptr);
+    }
+
     SECTION("Get tokens") {
         setVectorString(buffer, "abcd efg");
         embeddedCliTokenizeArgs(buffer.data());
@@ -130,6 +134,12 @@ TEST_CASE("EmbeddedCli. Tokens", "[cli][token]") {
         REQUIRE(tok0 == nullptr);
     }
 
+    SECTION("Get token from null string") {
+        const char *tok0 = embeddedCliGetToken(nullptr, 0);
+
+        REQUIRE(tok0 == nullptr);
+    }
+
     SECTION("Get token count") {
         setVectorString(buffer, "a b c");
         embeddedCliTokenizeArgs(buffer.data());
@@ -142,6 +152,10 @@ TEST_CASE("EmbeddedCli. Tokens", "[cli][token]") {
         embeddedCliTokenizeArgs(buffer.data());
 
         REQUIRE(embeddedCliGetTokenCount(buffer.data()) == 0);
+    }
+
+    SECTION("Get token count for null string") {
+        REQUIRE(embeddedCliGetTokenCount(nullptr) == 0);
     }
 }
 

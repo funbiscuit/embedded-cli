@@ -167,6 +167,8 @@ void embeddedCliFree(EmbeddedCli *cli) {
 }
 
 void embeddedCliTokenizeArgs(char *args) {
+    if (args == NULL)
+        return;
 
     // for now only space, but can add more later
     const char *separators = " ";
@@ -210,6 +212,8 @@ void embeddedCliTokenizeArgs(char *args) {
 }
 
 const char *embeddedCliGetToken(const char *tokenizedStr, uint8_t pos) {
+    if (tokenizedStr == NULL)
+        return NULL;
     int i = 0;
     int tokenCount = 0;
     while (true) {
@@ -232,7 +236,7 @@ const char *embeddedCliGetToken(const char *tokenizedStr, uint8_t pos) {
 }
 
 uint8_t embeddedCliGetTokenCount(const char *tokenizedStr) {
-    if (tokenizedStr[0] == '\0')
+    if (tokenizedStr == NULL || tokenizedStr[0] == '\0')
         return 0;
 
     int i = 0;
