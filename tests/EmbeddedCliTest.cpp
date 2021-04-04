@@ -219,4 +219,22 @@ void runTestsForCli(EmbeddedCli *cli) {
         REQUIRE(commands.back().name == "set");
         REQUIRE(commands.back().args == "led 1 150");
     }
+
+    SECTION("Test removing some chars") {
+        mock.sendLine("s\bget led\b\b\bjack 1\b56\b");
+
+        embeddedCliProcess(cli);
+
+        REQUIRE(commands.back().name == "get");
+        REQUIRE(commands.back().args == "jack 5");
+    }
+
+    SECTION("Test removing all chars") {
+        mock.sendLine("set\b\b\b\b\bget led");
+
+        embeddedCliProcess(cli);
+
+        REQUIRE(commands.back().name == "get");
+        REQUIRE(commands.back().args == "led");
+    }
 }
