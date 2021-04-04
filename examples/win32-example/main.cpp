@@ -25,6 +25,7 @@ int main() {
         onCommand(command->name == nullptr ? "" : command->name, command->args);
     };
     cli->writeChar = [](EmbeddedCli *embeddedCli, char c) {
+        std::cout << c;
     };
 
     std::cout << "Cli is running. Press 'Esc' to exit\n";
