@@ -72,6 +72,12 @@ struct EmbeddedCliConfig {
     uint16_t rxBufferSize;
 
     /**
+     * Size of buffer that is used to store current input that is not yet
+     * sended as command (return not pressed yet)
+     */
+    uint16_t cmdBufferSize;
+
+    /**
      * Buffer to use for cli and all internal structures. If NULL, memory will
      * be allocated dynamically. Otherwise this buffer is used and no
      * allocations are made
@@ -91,6 +97,7 @@ struct EmbeddedCliConfig {
  * immediately.
  * Default values:
  * -rxBufferSize  = 64
+ * -cmdBufferSize  = 64
  * -cliBuffer     = NULL (use dynamic allocation)
  * -cliBufferSize = 0
  * @return configuration for cli creation
@@ -115,6 +122,9 @@ EmbeddedCli *embeddedCliNewDefault(void);
 /**
  * Receive character and put it to internal buffer
  * Actual processing is done inside embeddedCliProcess
+ * You can call this function from something like interrupt service routine,
+ * just make sure that you call it only from single place. Otherwise input
+ * might get corrupted
  * @param cli
  * @param c   - received char
  */

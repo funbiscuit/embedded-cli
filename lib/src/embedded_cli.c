@@ -8,35 +8,128 @@
 
 
 typedef struct EmbeddedCliImpl EmbeddedCliImpl;
+typedef struct FifoBuf FifoBuf;
+
+struct FifoBuf {
+    char *buf;
+    /**
+     * Position of first element in buffer. From this position elements are taken
+     */
+    uint16_t front;
+    /**
+     * Position after last element. At this position new elements are inserted
+     */
+    uint16_t back;
+    /**
+     * Size of buffer
+     */
+    uint16_t size;
+};
 
 struct EmbeddedCliImpl {
     /**
-     * Buffer for storing received chars. Extra space for extra char that used
-     * in tokenization (to indicate end of tokens)
+     * Buffer for storing received chars.
+     * Chars are stored in FIFO mode.
      */
-    char *rxBuffer;
+    FifoBuf rxBuffer;
 
     /**
-     * Current size of buffer
+     * Buffer for current command
      */
-    uint16_t rxSize;
+    char *cmdBuffer;
 
     /**
-     * Max size of buffer
+     * Size of current command
      */
-    uint16_t rxMaxSize;
+    uint16_t cmdSize;
+
+    /**
+     * Total size of command buffer
+     */
+    uint16_t cmdMaxSize;
+
+    /**
+     * Stores last character that was processed.
+     */
+    char lastChar;
+
+    /**
+     * Indicates that rx buffer overflow happened. In such case last command
+     * that wasn't finished (no \r or \n were received) will be discarded
+     */
+    bool overflow;
 
     bool wasAllocated;
 };
 
 static EmbeddedCliConfig defaultConfig;
 
-static void removeUnfinishedCommand(EmbeddedCli *cli);
+/**
+ * Process input character. Character is valid displayable char and should be
+ * added to current command string and displayed to client.
+ * @param cli
+ * @param c
+ */
+static void onCharInput(EmbeddedCli *cli, char c);
 
-static bool isWhitespace(char c);
+/**
+ * Process control character (like \r or \n) possibly altering state of current
+ * command or executing onCommand callback.
+ * @param cli
+ * @param c
+ */
+static void onControlInput(EmbeddedCli *cli, char c);
+
+/**
+ * Parse command in buffer and execute callback
+ * @param cli
+ */
+static void parseCommand(EmbeddedCli *cli);
+
+/**
+ * Returns true if provided char is a supported control char:
+ * \r or \n
+ * @param c
+ * @return
+ */
+static bool isControlChar(char c);
+
+/**
+ * Returns true if provided char is a valid displayable character:
+ * a-z, A-Z, 0-9, whitespace, punctuation, etc.
+ * Currently only ASCII is supported
+ * @param c
+ * @return
+ */
+static bool isDisplayableChar(char c);
+
+/**
+ * How many elements are currently available in buffer
+ * @param buffer
+ * @return number of elements
+ */
+static uint16_t fifoBufAvailable(FifoBuf *buffer);
+
+/**
+ * Return first character from buffer and remove it from buffer
+ * Buffer must be non-empty, otherwise 0 is returned
+ * @param buffer
+ * @return
+ */
+static char fifoBufPop(FifoBuf *buffer);
+
+/**
+ * Push character into fifo buffer. If there is no space left, character is
+ * discarded and false is returned
+ * @param buffer
+ * @param a - character to add
+ * @return true if char was added to buffer, false otherwise
+ */
+static bool fifoBufPush(FifoBuf *buffer, char a);
 
 EmbeddedCliConfig *embeddedCliDefaultConfig(void) {
     defaultConfig.rxBufferSize = 64;
+    defaultConfig.cmdBufferSize = 64;
     defaultConfig.cliBuffer = NULL;
     defaultConfig.cliBufferSize = 0;
     return &defaultConfig;
@@ -48,7 +141,8 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
     if (config->cliBuffer != NULL) {
         // allocate memory from provided buffer
         size_t totalSize = sizeof(EmbeddedCli) + sizeof(EmbeddedCliImpl) +
-                           config->rxBufferSize * sizeof(char);
+                           config->rxBufferSize * sizeof(char) +
+                           config->cmdBufferSize * sizeof(char);
         // buffer is not big enough
         if (config->cliBufferSize < totalSize)
             return NULL;
@@ -58,22 +152,27 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
         cli = (EmbeddedCli *) config->cliBuffer;
         cli->_impl = (EmbeddedCliImpl *) &config->cliBuffer[sizeof(EmbeddedCli)];
         PREPARE_IMPL(cli)
-        impl->rxBuffer = (char *) &config->cliBuffer[sizeof(EmbeddedCli) +
-                                                     sizeof(EmbeddedCliImpl)];
+        impl->rxBuffer.buf = (char *) &config->cliBuffer[sizeof(EmbeddedCli) +
+                                                         sizeof(EmbeddedCliImpl)];
+        impl->cmdBuffer = (char *) &config->cliBuffer[sizeof(EmbeddedCli) +
+                                                      sizeof(EmbeddedCliImpl) +
+                                                      config->rxBufferSize * sizeof(char)];
         impl->wasAllocated = false;
-        impl->rxMaxSize = config->rxBufferSize;
     } else {
         EmbeddedCli *cliMem = malloc(sizeof(EmbeddedCli));
         EmbeddedCliImpl *implMem = malloc(sizeof(EmbeddedCliImpl));
         char *bufMem = malloc(config->rxBufferSize * sizeof(char));
+        char *cmdMem = malloc(config->cmdBufferSize * sizeof(char));
 
-        if (cliMem == NULL || implMem == NULL || bufMem == NULL) {
+        if (cliMem == NULL || implMem == NULL || bufMem == NULL || cmdMem == NULL) {
             if (cliMem != NULL)
                 free(cliMem);
             if (implMem != NULL)
                 free(implMem);
             if (bufMem != NULL)
                 free(bufMem);
+            if (cmdMem != NULL)
+                free(cmdMem);
             return NULL;
         }
 
@@ -82,10 +181,18 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
         cli->_impl = implMem;
         memset(cli->_impl, 0, sizeof(EmbeddedCliImpl));
         PREPARE_IMPL(cli)
-        impl->rxBuffer = bufMem;
+        impl->rxBuffer.buf = bufMem;
+        impl->cmdBuffer = cmdMem;
         impl->wasAllocated = true;
-        impl->rxMaxSize = config->rxBufferSize;
     }
+
+    PREPARE_IMPL(cli)
+    impl->rxBuffer.size = config->rxBufferSize;
+    impl->rxBuffer.front = 0;
+    impl->rxBuffer.back = 0;
+    impl->cmdMaxSize = config->cmdBufferSize;
+    impl->lastChar = '\0';
+    impl->overflow = false;
 
     return cli;
 }
@@ -97,64 +204,30 @@ EmbeddedCli *embeddedCliNewDefault(void) {
 void embeddedCliReceiveChar(EmbeddedCli *cli, char c) {
     PREPARE_IMPL(cli)
 
-    // if we can't receive more characters, remove command completely
-    if (impl->rxSize + 1 >= impl->rxMaxSize) {
-        removeUnfinishedCommand(cli);
-        return;
+    if (!fifoBufPush(&impl->rxBuffer, c)) {
+        impl->overflow = true;
     }
-
-    impl->rxBuffer[impl->rxSize] = c;
-    impl->rxSize++;
 }
 
 void embeddedCliProcess(EmbeddedCli *cli) {
     PREPARE_IMPL(cli)
 
-    char *cmdName = NULL;
-    char *cmdArgs = NULL;
-    bool nameFinished = false;
+    while (fifoBufAvailable(&impl->rxBuffer)) {
+        char c = fifoBufPop(&impl->rxBuffer);
 
-    for (int i = 0; i < impl->rxSize; ++i) {
-        char c = impl->rxBuffer[i];
-
-        if (c == '\r') {
-            impl->rxBuffer[i] = '\0';
-            impl->rxBuffer[i + 1] = '\0';
-            // send command
-
-            if (cmdName != NULL && cli->onCommand != NULL) {
-
-                CliCommand command;
-                command.name = cmdName;
-                command.args = cmdArgs;
-
-                cli->onCommand(cli, &command);
-            }
-
-            cmdName = NULL;
-            cmdArgs = NULL;
-            nameFinished = false;
-
-            if (i + 1 < impl->rxMaxSize)
-                memmove(impl->rxBuffer, &impl->rxBuffer[i + 1], impl->rxMaxSize - i - 1);
-
-            impl->rxSize -= i + 1;
-            i = -1;
-
-            continue;
-        }
-        if (isWhitespace(c)) {
-            if (cmdArgs == NULL)
-                impl->rxBuffer[i] = '\0';
-            if (cmdName != NULL)
-                nameFinished = true;
-            continue;
+        if (isControlChar(c)) {
+            onControlInput(cli, c);
+        } else if (isDisplayableChar(c)) {
+            onCharInput(cli, c);
         }
 
-        if (cmdName == NULL)
-            cmdName = &impl->rxBuffer[i];
-        else if (cmdArgs == NULL && nameFinished)
-            cmdArgs = &impl->rxBuffer[i];
+        impl->lastChar = c;
+    }
+
+    // discard unfinished command if overflow happened
+    if (impl->overflow) {
+        impl->cmdSize = 0;
+        impl->overflow = false;
     }
 }
 
@@ -253,25 +326,109 @@ uint8_t embeddedCliGetTokenCount(const char *tokenizedStr) {
     return tokenCount;
 }
 
-static void removeUnfinishedCommand(EmbeddedCli *cli) {
+static void onCharInput(EmbeddedCli *cli, char c) {
     PREPARE_IMPL(cli)
 
-    if (impl->rxSize == 0)
+    // have to reserve two extra chars for command ending (used in tokenization)
+    if (impl->cmdSize + 2 >= impl->cmdMaxSize)
         return;
 
-    // find last '\r' and remove everything else
-    for (int i = impl->rxSize - 1; i >= 0; --i) {
-        if (impl->rxBuffer[i] == '\r') {
-            impl->rxSize = i + 1;
-            break;
+    impl->cmdBuffer[impl->cmdSize] = c;
+    ++impl->cmdSize;
+
+    if (cli->writeChar != NULL)
+        cli->writeChar(cli, c);
+}
+
+static void onControlInput(EmbeddedCli *cli, char c) {
+    PREPARE_IMPL(cli)
+
+    // process \r\n and \n\r as single \r\n command
+    if ((impl->lastChar == '\r' && c == '\n') ||
+        (impl->lastChar == '\n' && c == '\r'))
+        return;
+
+    if (c == '\r' || c == '\n') {
+        cli->writeChar(cli, '\r');
+        cli->writeChar(cli, '\n');
+
+        if (impl->cmdSize > 0)
+            parseCommand(cli);
+        impl->cmdSize = 0;
+    }
+
+}
+
+static void parseCommand(EmbeddedCli *cli) {
+    PREPARE_IMPL(cli)
+
+    char *cmdName = NULL;
+    char *cmdArgs = NULL;
+    bool nameFinished = false;
+
+    // find command name and command args inside command buffer
+    for (int i = 0; i < impl->cmdSize; ++i) {
+        char c = impl->cmdBuffer[i];
+
+        if (c == ' ') {
+            // all spaces between name and args are filled with zeros
+            // so name is a correct null-terminated string
+            if (cmdArgs == NULL)
+                impl->cmdBuffer[i] = '\0';
+            if (cmdName != NULL)
+                nameFinished = true;
+
+        } else if (cmdName == NULL) {
+            cmdName = &impl->cmdBuffer[i];
+        } else if (cmdArgs == NULL && nameFinished) {
+            cmdArgs = &impl->cmdBuffer[i];
         }
-        if (i == 0) {
-            impl->rxSize = 0;
-            break;
-        }
+    }
+
+    // we keep two last bytes in cmd buffer reserved so cmdSize is always by 2
+    // less than cmdMaxSize
+    impl->cmdBuffer[impl->cmdSize] = '\0';
+    impl->cmdBuffer[impl->cmdSize + 1] = '\0';
+
+    if (cmdName != NULL && cli->onCommand != NULL) {
+        CliCommand command;
+        command.name = cmdName;
+        command.args = cmdArgs;
+
+        cli->onCommand(cli, &command);
     }
 }
 
-static bool isWhitespace(char c) {
-    return c == ' ' || c == '\t' || c == '\n' || c == '\0';
+static bool isControlChar(char c) {
+    return c == '\r' || c == '\n';
+}
+
+static bool isDisplayableChar(char c) {
+    return (c >= 32 && c <= 126);
+}
+
+static uint16_t fifoBufAvailable(FifoBuf *buffer) {
+    if (buffer->back >= buffer->front)
+        return buffer->back - buffer->front;
+    else
+        return buffer->size - buffer->front + buffer->back;
+}
+
+static char fifoBufPop(FifoBuf *buffer) {
+    char a = '\0';
+    if (buffer->front != buffer->back) {
+        a = buffer->buf[buffer->front];
+        buffer->front = (buffer->front + 1) % buffer->size;
+    }
+    return a;
+}
+
+static bool fifoBufPush(FifoBuf *buffer, char a) {
+    uint32_t newBack = (buffer->back + 1) % buffer->size;
+    if (newBack != buffer->front) {
+        buffer->buf[buffer->back] = a;
+        buffer->back = newBack;
+        return true;
+    }
+    return false;
 }

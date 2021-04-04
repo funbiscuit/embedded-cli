@@ -31,9 +31,9 @@ TEST_CASE("EmbeddedCli. Static allocation", "[cli]") {
         REQUIRE(embeddedCliNew(config) == NULL);
     }
 
-    std::vector<uint8_t> data(128);
+    std::vector<uint8_t> data(256);
     config->cliBuffer = data.data();
-    config->cliBufferSize = 128;
+    config->cliBufferSize = 256;
     EmbeddedCli *cli = embeddedCliNew(config);
 
     REQUIRE(cli != nullptr);
