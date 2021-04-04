@@ -30,12 +30,28 @@ public:
      */
     void sendStr(const std::string &line);
 
+    /**
+     * Adds command to a list of known commands
+     * @param name
+     */
+    void addCommandBinding(const char *name, const char *help = nullptr);
+
+    /**
+     * Return full output of cli
+     * @return
+     */
+    std::string getOutput();
+
     std::vector<Command> &getReceivedCommands();
+
+    std::vector<Command> &getReceivedKnownCommands();
 
 private:
     EmbeddedCli *cli;
 
     std::string lineEnding = "\r\n";
+
+    std::vector<CliCommandBinding> bindings;
 
     /**
      * Queue of characters that were sent from cli
@@ -47,7 +63,15 @@ private:
      */
     std::vector<Command> rxQueue;
 
+    /**
+     * Queue of commands that were received by cli and are known
+     * (specified in command bindings)
+     */
+    std::vector<Command> rxQueueBindings;
+
     void onCommand(CliCommand *command);
+
+    void onBoundCommand(Command command);
 
     void writeChar(char c);
 };

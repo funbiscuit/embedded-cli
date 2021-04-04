@@ -15,6 +15,7 @@ extern "C" {
 #include <stdint.h>
 
 typedef struct CliCommand CliCommand;
+typedef struct CliCommandBinding CliCommandBinding;
 typedef struct EmbeddedCli EmbeddedCli;
 typedef struct EmbeddedCliConfig EmbeddedCliConfig;
 
@@ -35,6 +36,42 @@ struct CliCommand {
     char *args;
 };
 
+/**
+ * Struct to describe binding of command to function and
+ */
+struct CliCommandBinding {
+    /**
+     * Name of command to bind. Should not be NULL.
+     */
+    const char *name;
+
+    /**
+     * Help string that will be displayed when "help <cmd>" is executed.
+     * Can have multiple lines separated with "\r\n"
+     * Can be NULL if no help is provided.
+     */
+    const char *help;
+
+    /**
+     * Flag to perform tokenization before calling binding function.
+     */
+    bool tokenizeArgs;
+
+    /**
+     * Pointer to any specific app context that is required for this binding.
+     * It will be provided in binding callback.
+     */
+    void *context;
+
+    /**
+     * Binding function for when command is received.
+     * If null, default callback (onCommand) will be called.
+     * @param cli - pointer to cli that is calling this binding
+     * @param args - string of args (if tokenizeArgs is false) or tokens otherwise
+     * @param context
+     */
+    void (*binding)(EmbeddedCli *cli, char *args, void *context);
+};
 
 struct EmbeddedCli {
     /**
@@ -45,7 +82,8 @@ struct EmbeddedCli {
     void (*writeChar)(EmbeddedCli *cli, char c);
 
     /**
-     * Called when command is received
+     * Called when command is received and command not found in list of
+     * command bindings (or binding function is null).
      * @param cli     - pointer to cli that executed this function
      * @param command - pointer to received command
      */
@@ -135,6 +173,16 @@ void embeddedCliReceiveChar(EmbeddedCli *cli, char c);
  * @param cli
  */
 void embeddedCliProcess(EmbeddedCli *cli);
+
+/**
+ * Set command bindings. If entered command is found in provided list, its
+ * binding will be called instead of default onCommand callback.
+ * @param cli
+ * @param bindings
+ * @param count
+ */
+void embeddedCliSetBindings(EmbeddedCli *cli, CliCommandBinding *bindings,
+                            uint16_t count);
 
 /**
  * Free allocated for cli memory

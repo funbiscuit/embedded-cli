@@ -48,6 +48,10 @@ struct EmbeddedCliImpl {
      */
     uint16_t cmdMaxSize;
 
+    CliCommandBinding *bindings;
+
+    uint16_t bindingsCount;
+
     /**
      * Stores last character that was processed.
      */
@@ -85,6 +89,27 @@ static void onControlInput(EmbeddedCli *cli, char c);
  * @param cli
  */
 static void parseCommand(EmbeddedCli *cli);
+
+/**
+ * Show help for given tokens (or default help if no tokens)
+ * @param cli
+ * @param tokens
+ */
+static void onHelp(EmbeddedCli *cli, char *tokens);
+
+/**
+ * Show error about unknown command
+ * @param cli
+ * @param name
+ */
+static void onUnknownCommand(EmbeddedCli *cli, const char *name);
+
+/**
+ * Write given string to cli output
+ * @param cli
+ * @param str
+ */
+static void writeToOutput(EmbeddedCli *cli, const char *str);
 
 /**
  * Returns true if provided char is a supported control char:
@@ -229,6 +254,14 @@ void embeddedCliProcess(EmbeddedCli *cli) {
         impl->cmdSize = 0;
         impl->overflow = false;
     }
+}
+
+void embeddedCliSetBindings(EmbeddedCli *cli, CliCommandBinding *bindings,
+                            uint16_t count) {
+    PREPARE_IMPL(cli)
+
+    impl->bindings = bindings;
+    impl->bindingsCount = count;
 }
 
 void embeddedCliFree(EmbeddedCli *cli) {
@@ -397,12 +430,73 @@ static void parseCommand(EmbeddedCli *cli) {
     impl->cmdBuffer[impl->cmdSize] = '\0';
     impl->cmdBuffer[impl->cmdSize + 1] = '\0';
 
-    if (cmdName != NULL && cli->onCommand != NULL) {
+    if (cmdName == NULL)
+        return;
+
+    if (strcmp("help", cmdName) == 0) {
+        embeddedCliTokenizeArgs(cmdArgs);
+        onHelp(cli, cmdArgs);
+        return;
+    }
+
+    // try to find command in bindings
+    for (int i = 0; i < impl->bindingsCount; ++i) {
+        if (strcmp(cmdName, impl->bindings[i].name) == 0) {
+            if (impl->bindings[i].binding == NULL)
+                break;
+
+            if (impl->bindings[i].tokenizeArgs)
+                embeddedCliTokenizeArgs(cmdArgs);
+            impl->bindings[i].binding(cli, cmdArgs, impl->bindings[i].context);
+            return;
+        }
+    }
+
+    // command not found in bindings or binding was null
+    // try to call default callback
+    if (cli->onCommand != NULL) {
         CliCommand command;
         command.name = cmdName;
         command.args = cmdArgs;
 
         cli->onCommand(cli, &command);
+    } else {
+        onUnknownCommand(cli, cmdName);
+    }
+}
+
+static void onHelp(EmbeddedCli *cli, char *tokens) {
+    PREPARE_IMPL(cli)
+
+    if (impl->bindingsCount == 0) {
+        writeToOutput(cli, "Help is not available\r\n");
+        return;
+    }
+
+    if (embeddedCliGetTokenCount(tokens) == 0) {
+        writeToOutput(cli, "Available commands:\r\n");
+        for (int i = 0; i < impl->bindingsCount; ++i) {
+            writeToOutput(cli, impl->bindings[i].name);
+            if (impl->bindings[i].help != NULL) {
+                writeToOutput(cli, ": ");
+                writeToOutput(cli, impl->bindings[i].help);
+            }
+            writeToOutput(cli, "\r\n");
+        }
+    }
+}
+
+static void onUnknownCommand(EmbeddedCli *cli, const char *name) {
+    writeToOutput(cli, "Unknown command: \"");
+    writeToOutput(cli, name);
+    writeToOutput(cli, "\". Write \"help\" for a list of available commands\r\n");
+}
+
+static void writeToOutput(EmbeddedCli *cli, const char *str) {
+    size_t len = strlen(str);
+
+    for (int i = 0; i < len; ++i) {
+        cli->writeChar(cli, str[i]);
     }
 }
 

@@ -237,4 +237,77 @@ void runTestsForCli(EmbeddedCli *cli) {
         REQUIRE(commands.back().name == "get");
         REQUIRE(commands.back().args == "led");
     }
+
+    SECTION("Unknown command handling") {
+        // unknown commands are only possible when onCommand callback is not set
+        cli->onCommand = nullptr;
+
+        SECTION("Providing unknown command") {
+            mock.sendLine("get led");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(commands.empty());
+            REQUIRE(mock.getOutput().find("Unknown command") != std::string::npos);
+        }
+
+        SECTION("Providing known command without binding") {
+            CliCommandBinding bindings[] = {
+                    {
+                            "get",
+                            nullptr,
+                            false,
+                            nullptr,
+                            nullptr
+                    }
+            };
+            embeddedCliSetBindings(cli, bindings, 1);
+
+            mock.sendLine("get led");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(commands.empty());
+        }
+
+        SECTION("Providing known command with binding") {
+            mock.addCommandBinding("get");
+
+            mock.sendLine("get led");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(commands.empty());
+            auto &cmds = mock.getReceivedKnownCommands();
+            REQUIRE_FALSE(cmds.empty());
+            REQUIRE(cmds.back().name == "get");
+            REQUIRE(cmds.back().args == "led");
+        }
+    }
+
+    SECTION("Help command handling") {
+        SECTION("Calling help without bindings") {
+            mock.sendLine("help");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(commands.empty());
+            REQUIRE(mock.getOutput().find("Help is not available") != std::string::npos);
+        }
+
+        SECTION("Calling help with bindings") {
+            mock.addCommandBinding("get", "Get specific parameter");
+            mock.addCommandBinding("set", "Set specific parameter");
+
+            mock.sendLine("help");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(commands.empty());
+            REQUIRE(mock.getOutput().find("get") != std::string::npos);
+            REQUIRE(mock.getOutput().find("Get specific parameter") != std::string::npos);
+            REQUIRE(mock.getOutput().find("set") != std::string::npos);
+            REQUIRE(mock.getOutput().find("Set specific parameter") != std::string::npos);
+        }
+    }
 }
