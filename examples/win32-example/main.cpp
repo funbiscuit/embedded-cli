@@ -8,7 +8,13 @@
 
 #include "embedded_cli.h"
 
+static bool exitFlag = false;
+
 void onCommand(const std::string &name, char *tokens);
+
+void onExit(EmbeddedCli *cli, char *args, void *context);
+
+void onHello(EmbeddedCli *cli, char *args, void *context);
 
 int main() {
     HANDLE hConsole = GetStdHandle(STD_INPUT_HANDLE);
@@ -28,9 +34,27 @@ int main() {
         std::cout << c;
     };
 
+    CliCommandBinding bindings[] = {
+            {
+                    "exit",
+                    "Stop CLI and exit",
+                    false,
+                    nullptr,
+                    onExit
+            },
+            {
+                    "hello",
+                    "Print hello message",
+                    false,
+                    (void *) "World",
+                    onHello
+            },
+    };
+    embeddedCliSetBindings(cli, bindings, 2);
+
     std::cout << "Cli is running. Press 'Esc' to exit\n";
 
-    while (true) {
+    while (!exitFlag) {
         INPUT_RECORD record;
         DWORD read;
         ReadConsoleInput(hConsole, &record, 1, &read);
@@ -56,9 +80,23 @@ int main() {
 }
 
 void onCommand(const std::string &name, char *tokens) {
-    std::cout << "Command: " << name << "\n";
+    std::cout << "Received command: " << name << "\n";
 
     for (int i = 0; i < embeddedCliGetTokenCount(tokens); ++i) {
         std::cout << "Arg " << i << ": " << embeddedCliGetToken(tokens, i) << "\n";
     }
+}
+
+void onExit(EmbeddedCli *cli, char *args, void *context) {
+    exitFlag = true;
+    std::cout << "Cli will shutdown now...\r\n";
+}
+
+void onHello(EmbeddedCli *cli, char *args, void *context) {
+    std::cout << "Hello, ";
+    if (embeddedCliGetTokenCount(args) == 0)
+        std::cout << (const char *) context;
+    else
+        std::cout << embeddedCliGetToken(args, 0);
+    std::cout << "\r\n";
 }
