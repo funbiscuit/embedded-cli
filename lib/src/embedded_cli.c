@@ -473,7 +473,8 @@ static void onHelp(EmbeddedCli *cli, char *tokens) {
         return;
     }
 
-    if (embeddedCliGetTokenCount(tokens) == 0) {
+    uint8_t tokenCount = embeddedCliGetTokenCount(tokens);
+    if (tokenCount == 0) {
         writeToOutput(cli, "Available commands:\r\n");
         for (int i = 0; i < impl->bindingsCount; ++i) {
             writeToOutput(cli, impl->bindings[i].name);
@@ -483,6 +484,31 @@ static void onHelp(EmbeddedCli *cli, char *tokens) {
             }
             writeToOutput(cli, "\r\n");
         }
+    } else if (tokenCount == 1) {
+        // try find command
+        const char *helpStr = NULL;
+        const char *cmdName = embeddedCliGetToken(tokens, 0);
+        bool found = false;
+        for (int i = 0; i < impl->bindingsCount; ++i) {
+            if (strcmp(impl->bindings[i].name, cmdName) == 0) {
+                helpStr = impl->bindings[i].help;
+                found = true;
+                break;
+            }
+        }
+        if (found && helpStr != NULL) {
+            writeToOutput(cli, cmdName);
+            writeToOutput(cli, ": ");
+            writeToOutput(cli, helpStr);
+        } else if (found) {
+            writeToOutput(cli, "No help is available for command \"");
+            writeToOutput(cli, cmdName);
+            writeToOutput(cli, "\"");
+        } else {
+            onUnknownCommand(cli, cmdName);
+        }
+    } else {
+        writeToOutput(cli, "Command \"help\" receives one or zero arguments");
     }
 }
 

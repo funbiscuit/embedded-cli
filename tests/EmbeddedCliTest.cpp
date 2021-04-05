@@ -309,5 +309,56 @@ void runTestsForCli(EmbeddedCli *cli) {
             REQUIRE(mock.getOutput().find("set") != std::string::npos);
             REQUIRE(mock.getOutput().find("Set specific parameter") != std::string::npos);
         }
+
+        SECTION("Calling help for known command") {
+            mock.addCommandBinding("get", "Get specific parameter");
+            mock.addCommandBinding("set", "Set specific parameter");
+
+            mock.sendLine("help get");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(commands.empty());
+            REQUIRE(mock.getOutput().find("get") != std::string::npos);
+            REQUIRE(mock.getOutput().find("Get specific parameter") != std::string::npos);
+            REQUIRE(mock.getOutput().find("set") == std::string::npos);
+            REQUIRE(mock.getOutput().find("Set specific parameter") == std::string::npos);
+        }
+
+        SECTION("Calling help for unknown command") {
+            mock.addCommandBinding("set", "Set specific parameter");
+
+            mock.sendLine("help get");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(commands.empty());
+            REQUIRE(mock.getOutput().find("get") != std::string::npos);
+            REQUIRE(mock.getOutput().find("Unknown") != std::string::npos);
+        }
+
+        SECTION("Calling help for command without help") {
+            mock.addCommandBinding("get");
+
+            mock.sendLine("help get");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(commands.empty());
+            REQUIRE(mock.getOutput().find("get") != std::string::npos);
+            REQUIRE(mock.getOutput().find("No help") != std::string::npos);
+        }
+
+        SECTION("Calling help with multiple arguments") {
+            mock.addCommandBinding("get");
+
+            mock.sendLine("help get set");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(commands.empty());
+            REQUIRE(mock.getOutput().find("Command \"help\" receives one or zero arguments") != std::string::npos);
+            REQUIRE(mock.getOutput().rfind("get") < 10);
+        }
     }
 }
