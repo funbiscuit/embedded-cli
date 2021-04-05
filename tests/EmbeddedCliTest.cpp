@@ -238,6 +238,25 @@ void runTestsForCli(EmbeddedCli *cli) {
         REQUIRE(commands.back().args == "led");
     }
 
+    SECTION("Test printing") {
+        SECTION("Print with no command input") {
+            embeddedCliPrint(cli, "test print");
+
+            REQUIRE(mock.getOutput() == "test print\r\n");
+        }
+
+        SECTION("Print with intermediate command") {
+            mock.sendStr("some cmd");
+
+            embeddedCliProcess(cli);
+
+            embeddedCliPrint(cli, "print");
+
+            //TODO add to mock ability to handle \b
+            REQUIRE(mock.getOutput() == "some cmd\b \b\b \b\b \b\b\b\b\b\bprint\r\nsome cmd");
+        }
+    }
+
     SECTION("Unknown command handling") {
         // unknown commands are only possible when onCommand callback is not set
         cli->onCommand = nullptr;

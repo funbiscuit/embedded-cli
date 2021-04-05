@@ -264,6 +264,30 @@ void embeddedCliSetBindings(EmbeddedCli *cli, CliCommandBinding *bindings,
     impl->bindingsCount = count;
 }
 
+void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
+    PREPARE_IMPL(cli)
+
+    size_t len = strlen(string);
+    size_t padLen = len >= impl->cmdSize ? 0 : impl->cmdSize - len;
+
+    // remove all chars for current command from screen
+    for (int i = 0; i < impl->cmdSize; ++i) {
+        if (i < padLen) {
+            cli->writeChar(cli, '\b');
+            cli->writeChar(cli, ' ');
+        }
+        cli->writeChar(cli, '\b');
+    }
+
+    // print provided string
+    writeToOutput(cli, string);
+    writeToOutput(cli, "\r\n");
+
+    // print current command back to screen
+    impl->cmdBuffer[impl->cmdSize] = '\0';
+    writeToOutput(cli, impl->cmdBuffer);
+}
+
 void embeddedCliFree(EmbeddedCli *cli) {
     PREPARE_IMPL(cli)
     if (impl->wasAllocated) {
@@ -500,15 +524,16 @@ static void onHelp(EmbeddedCli *cli, char *tokens) {
             writeToOutput(cli, cmdName);
             writeToOutput(cli, ": ");
             writeToOutput(cli, helpStr);
+            writeToOutput(cli, "\r\n");
         } else if (found) {
             writeToOutput(cli, "No help is available for command \"");
             writeToOutput(cli, cmdName);
-            writeToOutput(cli, "\"");
+            writeToOutput(cli, "\"\r\n");
         } else {
             onUnknownCommand(cli, cmdName);
         }
     } else {
-        writeToOutput(cli, "Command \"help\" receives one or zero arguments");
+        writeToOutput(cli, "Command \"help\" receives one or zero arguments\r\n");
     }
 }
 

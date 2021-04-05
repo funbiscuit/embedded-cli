@@ -185,6 +185,16 @@ void embeddedCliSetBindings(EmbeddedCli *cli, CliCommandBinding *bindings,
                             uint16_t count);
 
 /**
+ * Print specified string and account for currently entered but not submitted
+ * command.
+ * Current command is deleted, provided string is printed (with new line) after
+ * that current command is printed again, so user can continue typing it.
+ * @param cli
+ * @param string
+ */
+void embeddedCliPrint(EmbeddedCli *cli, const char *string);
+
+/**
  * Free allocated for cli memory
  * @param cli
  */

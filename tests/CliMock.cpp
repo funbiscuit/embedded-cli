@@ -42,7 +42,10 @@ void CliMock::addCommandBinding(const char *name, const char *help) {
 }
 
 std::string CliMock::getOutput() {
-    return txQueue.empty() ? "" : txQueue.data();
+    txQueue.push_back('\0');
+    std::string output = txQueue.data();
+    txQueue.pop_back();
+    return output;
 }
 
 std::vector<CliMock::Command> &CliMock::getReceivedCommands() {
