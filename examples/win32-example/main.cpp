@@ -4,6 +4,9 @@
  */
 
 #include <iostream>
+#include <thread>
+#include <string>
+#include <chrono>
 #include <Windows.h>
 
 #include "embedded_cli.h"
@@ -54,9 +57,28 @@ int main() {
 
     std::cout << "Cli is running. Press 'Esc' to exit\n";
 
+    auto lastUpdate = std::chrono::steady_clock::now();
+    auto t0 = std::chrono::steady_clock::now();
+
     while (!exitFlag) {
+        auto now = std::chrono::steady_clock::now();
+        auto passed = std::chrono::duration_cast<std::chrono::milliseconds>(now - t0).count();
+        if (std::chrono::duration_cast<std::chrono::seconds>(now - lastUpdate).count() > 1) {
+            std::string str = std::to_string(passed) + "ms passed";
+            embeddedCliPrint(cli, str.c_str());
+            lastUpdate = now;
+        }
+
         INPUT_RECORD record;
         DWORD read;
+        GetNumberOfConsoleInputEvents(hConsole, &read);
+
+        if (read == 0) {
+            using namespace std::chrono_literals;
+            std::this_thread::sleep_for(10ms);
+            continue;
+        }
+
         ReadConsoleInput(hConsole, &record, 1, &read);
 
         if (read > 0 && record.EventType == KEY_EVENT) {
