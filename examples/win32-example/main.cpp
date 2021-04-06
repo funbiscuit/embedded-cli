@@ -19,6 +19,10 @@ void onExit(EmbeddedCli *cli, char *args, void *context);
 
 void onHello(EmbeddedCli *cli, char *args, void *context);
 
+void onLed(EmbeddedCli *cli, char *args, void *context);
+
+void onAdc(EmbeddedCli *cli, char *args, void *context);
+
 int main() {
     HANDLE hConsole = GetStdHandle(STD_INPUT_HANDLE);
 
@@ -46,6 +50,20 @@ int main() {
                     onExit
             },
             {
+                    "get-led",
+                    "Get current led status",
+                    false,
+                    nullptr,
+                    onLed
+            },
+            {
+                    "get-adc",
+                    "Get current adc value",
+                    false,
+                    nullptr,
+                    onAdc
+            },
+            {
                     "hello",
                     "Print hello message",
                     false,
@@ -53,9 +71,11 @@ int main() {
                     onHello
             },
     };
-    embeddedCliSetBindings(cli, bindings, 2);
+    embeddedCliSetBindings(cli, bindings, sizeof(bindings) / sizeof(CliCommandBinding));
 
-    std::cout << "Cli is running. Press 'Esc' to exit\n";
+    std::cout << "Cli is running. Press 'Esc' to exit\r\n";
+    std::cout << "Type \"help\" for a list of commands\r\n";
+    std::cout << "Use backspace and tab to remove chars and autocomplete\r\n";
 
     auto lastUpdate = std::chrono::steady_clock::now();
     auto t0 = std::chrono::steady_clock::now();
@@ -121,4 +141,12 @@ void onHello(EmbeddedCli *cli, char *args, void *context) {
     else
         std::cout << embeddedCliGetToken(args, 0);
     std::cout << "\r\n";
+}
+
+void onLed(EmbeddedCli *cli, char *args, void *context) {
+    std::cout << "Current led brightness: " << std::rand() % 256 << "\r\n";
+}
+
+void onAdc(EmbeddedCli *cli, char *args, void *context) {
+    std::cout << "Current adc readings: " << std::rand() % 1024 << "\r\n";
 }
