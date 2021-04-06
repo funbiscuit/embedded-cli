@@ -563,8 +563,26 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
     const char *autocomplete = NULL;
     uint16_t candidateCount = 0;
     // how many chars we can complete
-    //size_t leftToComplete = 0;
     size_t autocompleteLen = 0;
+
+    // check if autocomplete can be "help", it is not in bindings, but can be
+    // autocompleted
+    if (impl->cmdSize <= 4) {
+        bool candidate = true;
+        const char *cmd = "help";
+        for (int i = 0; i < impl->cmdSize; ++i) {
+            if (impl->cmdBuffer[i] != cmd[i]) {
+                candidate = false;
+                break;
+            }
+        }
+        if (candidate) {
+            candidateCount = 1;
+            autocomplete = cmd;
+            autocompleteLen = 4;
+        }
+    }
+
 
     for (int i = 0; i < impl->bindingsCount; ++i) {
         const char *cmd = impl->bindings[i].name;

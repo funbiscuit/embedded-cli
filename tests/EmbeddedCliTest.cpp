@@ -393,6 +393,14 @@ void runTestsForCli(EmbeddedCli *cli) {
             REQUIRE(mock.getRawOutput() == "set ");
         }
 
+        SECTION("Autocomplete help command") {
+            mock.sendStr("h\t");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(mock.getRawOutput() == "help ");
+        }
+
         SECTION("Autocomplete when multiple candidates with common prefix") {
             mock.sendStr("g\t");
 
