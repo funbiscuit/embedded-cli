@@ -37,7 +37,14 @@ public:
     void addCommandBinding(const char *name, const char *help = nullptr);
 
     /**
-     * Return full output of cli
+     * Return raw output of cli
+     * @return
+     */
+    std::string getRawOutput();
+
+    /**
+     * Return processed output of cli
+     * \b removes previos character
      * @return
      */
     std::string getOutput();

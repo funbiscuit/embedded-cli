@@ -41,11 +41,26 @@ void CliMock::addCommandBinding(const char *name, const char *help) {
     embeddedCliSetBindings(cli, bindings.data(), bindings.size());
 }
 
-std::string CliMock::getOutput() {
+std::string CliMock::getRawOutput() {
     txQueue.push_back('\0');
     std::string output = txQueue.data();
     txQueue.pop_back();
     return output;
+}
+
+std::string CliMock::getOutput() {
+    std::vector<char> output;
+
+    for (auto c : txQueue) {
+        if (c == '\b') {
+            if (!output.empty())
+                output.pop_back();
+        } else {
+            output.push_back(c);
+        }
+    }
+    output.push_back('\0');
+    return output.data();
 }
 
 std::vector<CliMock::Command> &CliMock::getReceivedCommands() {

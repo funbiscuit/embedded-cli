@@ -242,7 +242,7 @@ void runTestsForCli(EmbeddedCli *cli) {
         SECTION("Print with no command input") {
             embeddedCliPrint(cli, "test print");
 
-            REQUIRE(mock.getOutput() == "test print\r\n");
+            REQUIRE(mock.getRawOutput() == "test print\r\n");
         }
 
         SECTION("Print with intermediate command") {
@@ -252,8 +252,7 @@ void runTestsForCli(EmbeddedCli *cli) {
 
             embeddedCliPrint(cli, "print");
 
-            //TODO add to mock ability to handle \b
-            REQUIRE(mock.getOutput() == "some cmd\b \b\b \b\b \b\b\b\b\b\bprint\r\nsome cmd");
+            REQUIRE(mock.getOutput() == "print\r\nsome cmd");
         }
     }
 
@@ -267,7 +266,7 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             REQUIRE(commands.empty());
-            REQUIRE(mock.getOutput().find("Unknown command") != std::string::npos);
+            REQUIRE(mock.getRawOutput().find("Unknown command") != std::string::npos);
         }
 
         SECTION("Providing known command without binding") {
@@ -311,7 +310,7 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             REQUIRE(commands.empty());
-            REQUIRE(mock.getOutput().find("Help is not available") != std::string::npos);
+            REQUIRE(mock.getRawOutput().find("Help is not available") != std::string::npos);
         }
 
         SECTION("Calling help with bindings") {
@@ -323,10 +322,10 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             REQUIRE(commands.empty());
-            REQUIRE(mock.getOutput().find("get") != std::string::npos);
-            REQUIRE(mock.getOutput().find("Get specific parameter") != std::string::npos);
-            REQUIRE(mock.getOutput().find("set") != std::string::npos);
-            REQUIRE(mock.getOutput().find("Set specific parameter") != std::string::npos);
+            REQUIRE(mock.getRawOutput().find("get") != std::string::npos);
+            REQUIRE(mock.getRawOutput().find("Get specific parameter") != std::string::npos);
+            REQUIRE(mock.getRawOutput().find("set") != std::string::npos);
+            REQUIRE(mock.getRawOutput().find("Set specific parameter") != std::string::npos);
         }
 
         SECTION("Calling help for known command") {
@@ -338,10 +337,10 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             REQUIRE(commands.empty());
-            REQUIRE(mock.getOutput().find("get") != std::string::npos);
-            REQUIRE(mock.getOutput().find("Get specific parameter") != std::string::npos);
-            REQUIRE(mock.getOutput().find("set") == std::string::npos);
-            REQUIRE(mock.getOutput().find("Set specific parameter") == std::string::npos);
+            REQUIRE(mock.getRawOutput().find("get") != std::string::npos);
+            REQUIRE(mock.getRawOutput().find("Get specific parameter") != std::string::npos);
+            REQUIRE(mock.getRawOutput().find("set") == std::string::npos);
+            REQUIRE(mock.getRawOutput().find("Set specific parameter") == std::string::npos);
         }
 
         SECTION("Calling help for unknown command") {
@@ -352,8 +351,8 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             REQUIRE(commands.empty());
-            REQUIRE(mock.getOutput().find("get") != std::string::npos);
-            REQUIRE(mock.getOutput().find("Unknown") != std::string::npos);
+            REQUIRE(mock.getRawOutput().find("get") != std::string::npos);
+            REQUIRE(mock.getRawOutput().find("Unknown") != std::string::npos);
         }
 
         SECTION("Calling help for command without help") {
@@ -364,8 +363,8 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             REQUIRE(commands.empty());
-            REQUIRE(mock.getOutput().find("get") != std::string::npos);
-            REQUIRE(mock.getOutput().find("No help") != std::string::npos);
+            REQUIRE(mock.getRawOutput().find("get") != std::string::npos);
+            REQUIRE(mock.getRawOutput().find("No help") != std::string::npos);
         }
 
         SECTION("Calling help with multiple arguments") {
@@ -376,8 +375,8 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             REQUIRE(commands.empty());
-            REQUIRE(mock.getOutput().find("Command \"help\" receives one or zero arguments") != std::string::npos);
-            REQUIRE(mock.getOutput().rfind("get") < 10);
+            REQUIRE(mock.getRawOutput().find("Command \"help\" receives one or zero arguments") != std::string::npos);
+            REQUIRE(mock.getRawOutput().rfind("get") < 10);
         }
     }
 }
