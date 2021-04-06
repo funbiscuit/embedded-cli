@@ -564,6 +564,7 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
     uint16_t candidateCount = 0;
     // how many chars we can complete
     size_t autocompleteLen = 0;
+    bool helpInCandidates = false;
 
     // check if autocomplete can be "help", it is not in bindings, but can be
     // autocompleted
@@ -577,6 +578,7 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
             }
         }
         if (candidate) {
+            helpInCandidates = true;
             candidateCount = 1;
             autocomplete = cmd;
             autocompleteLen = 4;
@@ -608,14 +610,15 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
             autocompleteLen = len;
 
         ++candidateCount;
-        autocomplete = cmd;
 
-        if (candidateCount == 1)
+        if (candidateCount == 1) {
+            autocomplete = cmd;
             continue;
+        }
 
         for (int j = impl->cmdSize; j < autocompleteLen; ++j) {
             if (autocomplete[j] != cmd[j]) {
-                autocompleteLen = j - 1;
+                autocompleteLen = j;
                 break;
             }
         }
@@ -636,6 +639,13 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
         // or show all candidates if we already have common prefix
         if (autocompleteLen == impl->cmdSize) {
             bool firstPrinted = false;
+
+            if (helpInCandidates) {
+                const char *cmd = "help";
+                writeToOutput(cli, &cmd[impl->cmdSize]);
+                writeToOutput(cli, "\r\n");
+                firstPrinted = true;
+            }
 
             for (int i = 0; i < impl->bindingsCount; ++i) {
                 const char *cmd = impl->bindings[i].name;

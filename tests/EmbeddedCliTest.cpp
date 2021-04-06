@@ -384,6 +384,8 @@ void runTestsForCli(EmbeddedCli *cli) {
         mock.addCommandBinding("get");
         mock.addCommandBinding("set");
         mock.addCommandBinding("get-new");
+        mock.addCommandBinding("reset-first");
+        mock.addCommandBinding("reset-second");
 
         SECTION("Autocomplete when single candidate") {
             mock.sendStr("s\t");
@@ -425,6 +427,24 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             REQUIRE(mock.getOutput() == "get");
+        }
+
+        SECTION("Autocomplete when multiple candidates with common prefix and not common suffix") {
+            mock.sendStr("r\t");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(mock.getOutput() == "reset-");
+        }
+
+        SECTION("Autocomplete when multiple candidates and one is help") {
+            mock.addCommandBinding("hello");
+
+            mock.sendStr("hel\t");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(mock.getOutput() == "help\r\nhello\r\nhel");
         }
 
         SECTION("Autocomplete when multiple candidates without common prefix") {
