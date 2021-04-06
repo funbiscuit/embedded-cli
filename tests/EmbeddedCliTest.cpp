@@ -379,4 +379,42 @@ void runTestsForCli(EmbeddedCli *cli) {
             REQUIRE(mock.getRawOutput().rfind("get") < 10);
         }
     }
+
+    SECTION("Autocomplete") {
+        mock.addCommandBinding("get");
+        mock.addCommandBinding("set");
+        mock.addCommandBinding("get-new");
+
+        SECTION("Autocomplete when single candidate") {
+            mock.sendStr("s\t");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(mock.getRawOutput() == "set ");
+        }
+
+        SECTION("Autocomplete when multiple candidates with common prefix") {
+            mock.sendStr("g\t");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(mock.getOutput() == "get");
+        }
+
+        SECTION("Autocomplete when multiple candidates without common prefix") {
+            mock.sendStr("get\t");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(mock.getOutput() == "get\r\nget-new\r\nget");
+        }
+
+        SECTION("Autocomplete when no candidates") {
+            mock.sendStr("m\t");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(mock.getRawOutput() == "m");
+        }
+    }
 }

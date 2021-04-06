@@ -105,6 +105,14 @@ static void onHelp(EmbeddedCli *cli, char *tokens);
 static void onUnknownCommand(EmbeddedCli *cli, const char *name);
 
 /**
+ * Handles autocomplete request. If autocomplete possible - fills current
+ * command with autocompleted command. When multiple commands satisfy entered
+ * prefix, they are printed to output.
+ * @param cli
+ */
+static void onAutocompleteRequest(EmbeddedCli *cli);
+
+/**
  * Write given string to cli output
  * @param cli
  * @param str
@@ -419,6 +427,8 @@ static void onControlInput(EmbeddedCli *cli, char c) {
         cli->writeChar(cli, '\b');
         // and from buffer
         --impl->cmdSize;
+    } else if (c == '\t') {
+        onAutocompleteRequest(cli);
     }
 
 }
@@ -543,6 +553,113 @@ static void onUnknownCommand(EmbeddedCli *cli, const char *name) {
     writeToOutput(cli, "\". Write \"help\" for a list of available commands\r\n");
 }
 
+static void onAutocompleteRequest(EmbeddedCli *cli) {
+    PREPARE_IMPL(cli)
+
+    if (impl->bindingsCount == 0 || impl->cmdSize == 0)
+        return;
+
+
+    const char *autocomplete = NULL;
+    uint16_t candidateCount = 0;
+    // how many chars we can complete
+    //size_t leftToComplete = 0;
+    size_t autocompleteLen = 0;
+
+    for (int i = 0; i < impl->bindingsCount; ++i) {
+        const char *cmd = impl->bindings[i].name;
+
+        size_t len = strlen(cmd);
+
+        if (len < impl->cmdSize)
+            continue;
+
+
+        // check if this command is candidate for autocomplete
+        bool isCandidate = true;
+        for (int j = 0; j < impl->cmdSize; ++j) {
+            if (impl->cmdBuffer[j] != cmd[j]) {
+                isCandidate = false;
+                break;
+            }
+        }
+        if (!isCandidate)
+            continue;
+
+        if (candidateCount == 0 || len < autocompleteLen)
+            autocompleteLen = len;
+
+        ++candidateCount;
+        autocomplete = cmd;
+
+        if (candidateCount == 1)
+            continue;
+
+        for (int j = impl->cmdSize; j < autocompleteLen; ++j) {
+            if (autocomplete[j] != cmd[j]) {
+                autocompleteLen = j - 1;
+                break;
+            }
+        }
+    }
+
+    if (candidateCount == 1) {
+        // complete command and insert space
+        for (int i = impl->cmdSize; i < autocompleteLen; ++i) {
+            char c = autocomplete[i];
+            cli->writeChar(cli, c);
+            impl->cmdBuffer[i] = c;
+        }
+        cli->writeChar(cli, ' ');
+        impl->cmdBuffer[autocompleteLen] = ' ';
+        impl->cmdSize = autocompleteLen + 1;
+    } else if (candidateCount > 1) {
+        // with multiple candidates we either complete to common prefix
+        // or show all candidates if we already have common prefix
+        if (autocompleteLen == impl->cmdSize) {
+            bool firstPrinted = false;
+
+            for (int i = 0; i < impl->bindingsCount; ++i) {
+                const char *cmd = impl->bindings[i].name;
+                size_t len = strlen(cmd);
+                if (len < impl->cmdSize)
+                    continue;
+
+                // check if this command is candidate for autocomplete
+                bool isCandidate = true;
+                for (int j = 0; j < impl->cmdSize; ++j) {
+                    if (impl->cmdBuffer[j] != cmd[j]) {
+                        isCandidate = false;
+                        break;
+                    }
+                }
+                if (!isCandidate)
+                    continue;
+
+                if (firstPrinted) {
+                    writeToOutput(cli, cmd);
+                } else {
+                    firstPrinted = true;
+                    // cmd begins with current cmdBuffer, so just print remaining
+                    writeToOutput(cli, &cmd[impl->cmdSize]);
+                }
+
+                writeToOutput(cli, "\r\n");
+            }
+
+            impl->cmdBuffer[impl->cmdSize] = '\0';
+            writeToOutput(cli, impl->cmdBuffer);
+        } else {
+            // complete to common prefix
+            for (int i = impl->cmdSize; i < autocompleteLen; ++i) {
+                char c = autocomplete[i];
+                cli->writeChar(cli, c);
+                impl->cmdBuffer[i] = c;
+            }
+        }
+    }
+}
+
 static void writeToOutput(EmbeddedCli *cli, const char *str) {
     size_t len = strlen(str);
 
@@ -552,7 +669,7 @@ static void writeToOutput(EmbeddedCli *cli, const char *str) {
 }
 
 static bool isControlChar(char c) {
-    return c == '\r' || c == '\n' || c == '\b';
+    return c == '\r' || c == '\n' || c == '\b' || c == '\t';
 }
 
 static bool isDisplayableChar(char c) {
