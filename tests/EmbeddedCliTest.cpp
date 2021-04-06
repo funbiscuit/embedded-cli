@@ -393,6 +393,24 @@ void runTestsForCli(EmbeddedCli *cli) {
             REQUIRE(mock.getRawOutput() == "set ");
         }
 
+        SECTION("Submit autocompleted command") {
+            mock.sendLine("s\t");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(!mock.getReceivedKnownCommands().empty());
+            REQUIRE(mock.getReceivedKnownCommands().back().name == "set");
+        }
+
+        SECTION("Submit autocompleted command when multiple candidates") {
+            mock.sendLine("g\t");
+
+            embeddedCliProcess(cli);
+
+            REQUIRE(!mock.getReceivedKnownCommands().empty());
+            REQUIRE(mock.getReceivedKnownCommands().back().name == "get");
+        }
+
         SECTION("Autocomplete help command") {
             mock.sendStr("h\t");
 

@@ -674,6 +674,7 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
                 cli->writeChar(cli, c);
                 impl->cmdBuffer[i] = c;
             }
+            impl->cmdSize = autocompleteLen;
         }
     }
 }
