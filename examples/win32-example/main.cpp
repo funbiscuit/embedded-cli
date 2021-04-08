@@ -41,37 +41,34 @@ int main() {
         std::cout << c;
     };
 
-    CliCommandBinding bindings[] = {
-            {
-                    "exit",
-                    "Stop CLI and exit",
-                    false,
-                    nullptr,
-                    onExit
-            },
-            {
-                    "get-led",
-                    "Get current led status",
-                    false,
-                    nullptr,
-                    onLed
-            },
-            {
-                    "get-adc",
-                    "Get current adc value",
-                    false,
-                    nullptr,
-                    onAdc
-            },
-            {
-                    "hello",
-                    "Print hello message",
-                    false,
-                    (void *) "World",
-                    onHello
-            },
-    };
-    embeddedCliSetBindings(cli, bindings, sizeof(bindings) / sizeof(CliCommandBinding));
+    embeddedCliAddBinding(cli, {
+            "exit",
+            "Stop CLI and exit",
+            false,
+            nullptr,
+            onExit
+    });
+    embeddedCliAddBinding(cli, {
+            "get-led",
+            "Get current led status",
+            false,
+            nullptr,
+            onLed
+    });
+    embeddedCliAddBinding(cli, {
+            "get-adc",
+            "Get current adc value",
+            false,
+            nullptr,
+            onAdc
+    });
+    embeddedCliAddBinding(cli, {
+            "hello",
+            "Print hello message",
+            false,
+            (void *) "World",
+            onHello
+    });
 
     std::cout << "Cli is running. Press 'Esc' to exit\r\n";
     std::cout << "Type \"help\" for a list of commands\r\n";
