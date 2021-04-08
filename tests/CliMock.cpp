@@ -36,9 +36,8 @@ void CliMock::addCommandBinding(const char *name, const char *help) {
         cmd.args = args != nullptr ? args : "";
         mock->onBoundCommand(cmd);
     };
-    bindings.push_back(binding);
 
-    embeddedCliSetBindings(cli, bindings.data(), bindings.size());
+    embeddedCliAddBinding(cli, binding);
 }
 
 std::string CliMock::getRawOutput() {

@@ -31,9 +31,9 @@ TEST_CASE("EmbeddedCli. Static allocation", "[cli]") {
         REQUIRE(embeddedCliNew(config) == NULL);
     }
 
-    std::vector<uint8_t> data(256);
+    std::vector<uint8_t> data(512);
     config->cliBuffer = data.data();
-    config->cliBufferSize = 256;
+    config->cliBufferSize = 512;
     EmbeddedCli *cli = embeddedCliNew(config);
 
     REQUIRE(cli != nullptr);
@@ -257,35 +257,31 @@ void runTestsForCli(EmbeddedCli *cli) {
     }
 
     SECTION("Unknown command handling") {
-        // unknown commands are only possible when onCommand callback is not set
-        cli->onCommand = nullptr;
 
         SECTION("Providing unknown command") {
+            // unknown commands are only possible when onCommand callback is not set
+            cli->onCommand = nullptr;
             mock.sendLine("get led");
 
             embeddedCliProcess(cli);
 
-            REQUIRE(commands.empty());
             REQUIRE(mock.getRawOutput().find("Unknown command") != std::string::npos);
         }
 
         SECTION("Providing known command without binding") {
-            CliCommandBinding bindings[] = {
-                    {
-                            "get",
-                            nullptr,
-                            false,
-                            nullptr,
-                            nullptr
-                    }
-            };
-            embeddedCliSetBindings(cli, bindings, 1);
+            embeddedCliAddBinding(cli, {
+                    "get",
+                    nullptr,
+                    false,
+                    nullptr,
+                    nullptr
+            });
 
             mock.sendLine("get led");
 
             embeddedCliProcess(cli);
 
-            REQUIRE(commands.empty());
+            REQUIRE(!commands.empty());
         }
 
         SECTION("Providing known command with binding") {
@@ -304,15 +300,6 @@ void runTestsForCli(EmbeddedCli *cli) {
     }
 
     SECTION("Help command handling") {
-        SECTION("Calling help without bindings") {
-            mock.sendLine("help");
-
-            embeddedCliProcess(cli);
-
-            REQUIRE(commands.empty());
-            REQUIRE(mock.getRawOutput().find("Help is not available") != std::string::npos);
-        }
-
         SECTION("Calling help with bindings") {
             mock.addCommandBinding("get", "Get specific parameter");
             mock.addCommandBinding("set", "Set specific parameter");

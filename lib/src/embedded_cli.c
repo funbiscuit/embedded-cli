@@ -52,6 +52,8 @@ struct EmbeddedCliImpl {
 
     uint16_t bindingsCount;
 
+    uint16_t maxBindingsCount;
+
     /**
      * Stores last character that was processed.
      */
@@ -67,6 +69,12 @@ struct EmbeddedCliImpl {
 };
 
 static EmbeddedCliConfig defaultConfig;
+
+/**
+ * Number of commands that cli adds. Commands:
+ * - help
+ */
+static const uint16_t cliInternalBindingCount = 1;
 
 /**
  * Process input character. Character is valid displayable char and should be
@@ -91,11 +99,18 @@ static void onControlInput(EmbeddedCli *cli, char c);
 static void parseCommand(EmbeddedCli *cli);
 
 /**
+ * Setup bindings for internal commands, like help
+ * @param cli
+ */
+static void initInternalBindings(EmbeddedCli *cli);
+
+/**
  * Show help for given tokens (or default help if no tokens)
  * @param cli
  * @param tokens
+ * @param context - not used
  */
-static void onHelp(EmbeddedCli *cli, char *tokens);
+static void onHelp(EmbeddedCli *cli, char *tokens, void *context);
 
 /**
  * Show error about unknown command
@@ -165,67 +180,60 @@ EmbeddedCliConfig *embeddedCliDefaultConfig(void) {
     defaultConfig.cmdBufferSize = 64;
     defaultConfig.cliBuffer = NULL;
     defaultConfig.cliBufferSize = 0;
+    defaultConfig.maxBindingCount = 8;
     return &defaultConfig;
 }
 
 EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
     EmbeddedCli *cli = NULL;
 
-    if (config->cliBuffer != NULL) {
-        // allocate memory from provided buffer
-        size_t totalSize = sizeof(EmbeddedCli) + sizeof(EmbeddedCliImpl) +
-                           config->rxBufferSize * sizeof(char) +
-                           config->cmdBufferSize * sizeof(char);
-        // buffer is not big enough
-        if (config->cliBufferSize < totalSize)
+    size_t totalSize = sizeof(EmbeddedCli) + sizeof(EmbeddedCliImpl) +
+                       config->rxBufferSize * sizeof(char) +
+                       config->cmdBufferSize * sizeof(char) +
+                       config->maxBindingCount * sizeof(CliCommandBinding) +
+                       cliInternalBindingCount * sizeof(CliCommandBinding);
+
+    bool allocated = false;
+    if (config->cliBuffer == NULL) {
+        config->cliBuffer = malloc(totalSize);
+        if (config->cliBuffer == NULL)
             return NULL;
-
-        memset(config->cliBuffer, 0, totalSize);
-
-        cli = (EmbeddedCli *) config->cliBuffer;
-        cli->_impl = (EmbeddedCliImpl *) &config->cliBuffer[sizeof(EmbeddedCli)];
-        PREPARE_IMPL(cli)
-        impl->rxBuffer.buf = (char *) &config->cliBuffer[sizeof(EmbeddedCli) +
-                                                         sizeof(EmbeddedCliImpl)];
-        impl->cmdBuffer = (char *) &config->cliBuffer[sizeof(EmbeddedCli) +
-                                                      sizeof(EmbeddedCliImpl) +
-                                                      config->rxBufferSize * sizeof(char)];
-        impl->wasAllocated = false;
-    } else {
-        EmbeddedCli *cliMem = malloc(sizeof(EmbeddedCli));
-        EmbeddedCliImpl *implMem = malloc(sizeof(EmbeddedCliImpl));
-        char *bufMem = malloc(config->rxBufferSize * sizeof(char));
-        char *cmdMem = malloc(config->cmdBufferSize * sizeof(char));
-
-        if (cliMem == NULL || implMem == NULL || bufMem == NULL || cmdMem == NULL) {
-            if (cliMem != NULL)
-                free(cliMem);
-            if (implMem != NULL)
-                free(implMem);
-            if (bufMem != NULL)
-                free(bufMem);
-            if (cmdMem != NULL)
-                free(cmdMem);
-            return NULL;
-        }
-
-        cli = cliMem;
-        memset(cli, 0, sizeof(EmbeddedCli));
-        cli->_impl = implMem;
-        memset(cli->_impl, 0, sizeof(EmbeddedCliImpl));
-        PREPARE_IMPL(cli)
-        impl->rxBuffer.buf = bufMem;
-        impl->cmdBuffer = cmdMem;
-        impl->wasAllocated = true;
+        allocated = true;
+    } else if (config->cliBufferSize < totalSize) {
+        return NULL;
     }
 
+    uint8_t *buf = config->cliBuffer;
+
+    memset(buf, 0, totalSize);
+
+    cli = (EmbeddedCli *) buf;
+    buf = &buf[sizeof(EmbeddedCli)];
+
+    cli->_impl = (EmbeddedCliImpl *) buf;
+    buf = &buf[sizeof(EmbeddedCliImpl)];
+
     PREPARE_IMPL(cli)
+    impl->rxBuffer.buf = (char *) buf;
+    buf = &buf[config->rxBufferSize * sizeof(char)];
+
+    impl->cmdBuffer = (char *) buf;
+    buf = &buf[config->cmdBufferSize * sizeof(char)];
+
+    impl->bindings = (CliCommandBinding *) buf;
+
+    impl->wasAllocated = allocated;
+
     impl->rxBuffer.size = config->rxBufferSize;
     impl->rxBuffer.front = 0;
     impl->rxBuffer.back = 0;
     impl->cmdMaxSize = config->cmdBufferSize;
+    impl->bindingsCount = 0;
+    impl->maxBindingsCount = config->maxBindingCount + cliInternalBindingCount;
     impl->lastChar = '\0';
     impl->overflow = false;
+
+    initInternalBindings(cli);
 
     return cli;
 }
@@ -264,12 +272,15 @@ void embeddedCliProcess(EmbeddedCli *cli) {
     }
 }
 
-void embeddedCliSetBindings(EmbeddedCli *cli, CliCommandBinding *bindings,
-                            uint16_t count) {
+bool embeddedCliAddBinding(EmbeddedCli *cli, CliCommandBinding binding) {
     PREPARE_IMPL(cli)
+    if (impl->bindingsCount == impl->maxBindingsCount)
+        return false;
 
-    impl->bindings = bindings;
-    impl->bindingsCount = count;
+    impl->bindings[impl->bindingsCount] = binding;
+
+    ++impl->bindingsCount;
+    return true;
 }
 
 void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
@@ -299,7 +310,7 @@ void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
 void embeddedCliFree(EmbeddedCli *cli) {
     PREPARE_IMPL(cli)
     if (impl->wasAllocated) {
-        free(cli->_impl);
+        // allocation is done in single call to malloc, so need only single free
         free(cli);
     }
 }
@@ -467,12 +478,6 @@ static void parseCommand(EmbeddedCli *cli) {
     if (cmdName == NULL)
         return;
 
-    if (strcmp("help", cmdName) == 0) {
-        embeddedCliTokenizeArgs(cmdArgs);
-        onHelp(cli, cmdArgs);
-        return;
-    }
-
     // try to find command in bindings
     for (int i = 0; i < impl->bindingsCount; ++i) {
         if (strcmp(cmdName, impl->bindings[i].name) == 0) {
@@ -499,7 +504,20 @@ static void parseCommand(EmbeddedCli *cli) {
     }
 }
 
-static void onHelp(EmbeddedCli *cli, char *tokens) {
+static void initInternalBindings(EmbeddedCli *cli) {
+    PREPARE_IMPL(cli)
+
+    CliCommandBinding b = {
+            "help",
+            "Print list of commands",
+            true,
+            NULL,
+            onHelp
+    };
+    embeddedCliAddBinding(cli, b);
+}
+
+static void onHelp(EmbeddedCli *cli, char *tokens, void *context) {
     PREPARE_IMPL(cli)
 
     if (impl->bindingsCount == 0) {
@@ -564,26 +582,6 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
     uint16_t candidateCount = 0;
     // how many chars we can complete
     size_t autocompleteLen = 0;
-    bool helpInCandidates = false;
-
-    // check if autocomplete can be "help", it is not in bindings, but can be
-    // autocompleted
-    if (impl->cmdSize <= 4) {
-        bool candidate = true;
-        const char *cmd = "help";
-        for (int i = 0; i < impl->cmdSize; ++i) {
-            if (impl->cmdBuffer[i] != cmd[i]) {
-                candidate = false;
-                break;
-            }
-        }
-        if (candidate) {
-            helpInCandidates = true;
-            candidateCount = 1;
-            autocomplete = cmd;
-            autocompleteLen = 4;
-        }
-    }
 
 
     for (int i = 0; i < impl->bindingsCount; ++i) {
@@ -639,13 +637,6 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
         // or show all candidates if we already have common prefix
         if (autocompleteLen == impl->cmdSize) {
             bool firstPrinted = false;
-
-            if (helpInCandidates) {
-                const char *cmd = "help";
-                writeToOutput(cli, &cmd[impl->cmdSize]);
-                writeToOutput(cli, "\r\n");
-                firstPrinted = true;
-            }
 
             for (int i = 0; i < impl->bindingsCount; ++i) {
                 const char *cmd = impl->bindings[i].name;

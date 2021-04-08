@@ -58,8 +58,6 @@ private:
 
     std::string lineEnding = "\r\n";
 
-    std::vector<CliCommandBinding> bindings;
-
     /**
      * Queue of characters that were sent from cli
      */

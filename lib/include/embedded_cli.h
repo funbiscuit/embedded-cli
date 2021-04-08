@@ -116,6 +116,13 @@ struct EmbeddedCliConfig {
     uint16_t cmdBufferSize;
 
     /**
+     * Maximum amount of bindings that can be added via addBinding function.
+     * Cli increases takes extra bindings for internal commands:
+     * - help
+     */
+    uint16_t maxBindingCount;
+
+    /**
      * Buffer to use for cli and all internal structures. If NULL, memory will
      * be allocated dynamically. Otherwise this buffer is used and no
      * allocations are made
@@ -138,6 +145,7 @@ struct EmbeddedCliConfig {
  * -cmdBufferSize  = 64
  * -cliBuffer     = NULL (use dynamic allocation)
  * -cliBufferSize = 0
+ * -maxBindingCount = 8
  * @return configuration for cli creation
  */
 EmbeddedCliConfig *embeddedCliDefaultConfig(void);
@@ -175,14 +183,13 @@ void embeddedCliReceiveChar(EmbeddedCli *cli, char c);
 void embeddedCliProcess(EmbeddedCli *cli);
 
 /**
- * Set command bindings. If entered command is found in provided list, its
- * binding will be called instead of default onCommand callback.
+ * Add specified binding to list of bindings. If list is already full, binding
+ * is not added and false is returned
  * @param cli
- * @param bindings
- * @param count
+ * @param binding
+ * @return true if binding was added, false otherwise
  */
-void embeddedCliSetBindings(EmbeddedCli *cli, CliCommandBinding *bindings,
-                            uint16_t count);
+bool embeddedCliAddBinding(EmbeddedCli *cli, CliCommandBinding binding);
 
 /**
  * Print specified string and account for currently entered but not submitted
