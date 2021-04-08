@@ -1,6 +1,6 @@
 name: CMake
 
-on: [push]
+on: [ push ]
 
 env:
   BUILD_TYPE: Release
@@ -35,6 +35,7 @@ jobs:
         run: ctest -C $BUILD_TYPE
 
       - name: Upload test logs
+        if: ${{ always() }}
         uses: actions/upload-artifact@v2
         with:
           name: testing.zip
