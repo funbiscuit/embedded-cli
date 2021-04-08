@@ -38,5 +38,5 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v2
         with:
-          name: testing.zip
+          name: testing
           path: ${{github.workspace}}/build/Testing
