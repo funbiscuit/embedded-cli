@@ -6,8 +6,14 @@
 #define PREPARE_IMPL(t) \
   EmbeddedCliImpl* impl = (EmbeddedCliImpl*)t->_impl;
 
+/**
+ * Marks binding as candidate for autocompletion
+ * This flag is updated each time getAutocompletedCommand is called
+ */
+#define BINDING_FLAG_AUTOCOMPLETE 1u
 
 typedef struct EmbeddedCliImpl EmbeddedCliImpl;
+typedef struct AutocompletedCommand AutocompletedCommand;
 typedef struct FifoBuf FifoBuf;
 
 struct FifoBuf {
@@ -50,6 +56,11 @@ struct EmbeddedCliImpl {
 
     CliCommandBinding *bindings;
 
+    /**
+     * Flags for each binding. Sizes are the same as for bindings array
+     */
+    uint8_t *bindingsFlags;
+
     uint16_t bindingsCount;
 
     uint16_t maxBindingsCount;
@@ -66,6 +77,28 @@ struct EmbeddedCliImpl {
     bool overflow;
 
     bool wasAllocated;
+};
+
+struct AutocompletedCommand {
+    /**
+     * Name of autocompleted command (or first candidate for autocompletion if
+     * there are multiple candidates).
+     * NULL if autocomplete not possible.
+     */
+    const char *firstCandidate;
+
+    /**
+     * Number of characters that can be completed safely. For example, if there
+     * are two possible commands "get-led" and "get-adc", then for prefix "g"
+     * autocompletedLen will be 4. If there are only one candidate, this number
+     * is always equal to length of the command.
+     */
+    size_t autocompletedLen;
+
+    /**
+     * Total number of candidates for autocompletion
+     */
+    uint16_t candidateCount;
 };
 
 static EmbeddedCliConfig defaultConfig;
@@ -118,6 +151,16 @@ static void onHelp(EmbeddedCli *cli, char *tokens, void *context);
  * @param name
  */
 static void onUnknownCommand(EmbeddedCli *cli, const char *name);
+
+/**
+ * Return autocompleted command for given prefix.
+ * Prefix is compared to all known command bindings and autocompleted result
+ * is returned
+ * @param cli
+ * @param prefix
+ * @return
+ */
+static AutocompletedCommand getAutocompletedCommand(EmbeddedCli *cli, const char *prefix);
 
 /**
  * Handles autocomplete request. If autocomplete possible - fills current
@@ -187,11 +230,13 @@ EmbeddedCliConfig *embeddedCliDefaultConfig(void) {
 EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
     EmbeddedCli *cli = NULL;
 
+    uint16_t bindingCount = config->maxBindingCount + cliInternalBindingCount;
+
     size_t totalSize = sizeof(EmbeddedCli) + sizeof(EmbeddedCliImpl) +
                        config->rxBufferSize * sizeof(char) +
                        config->cmdBufferSize * sizeof(char) +
-                       config->maxBindingCount * sizeof(CliCommandBinding) +
-                       cliInternalBindingCount * sizeof(CliCommandBinding);
+                       bindingCount * sizeof(CliCommandBinding) +
+                       bindingCount * sizeof(uint8_t);
 
     bool allocated = false;
     if (config->cliBuffer == NULL) {
@@ -221,6 +266,9 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
     buf = &buf[config->cmdBufferSize * sizeof(char)];
 
     impl->bindings = (CliCommandBinding *) buf;
+    buf = &buf[bindingCount * sizeof(CliCommandBinding)];
+
+    impl->bindingsFlags = buf;
 
     impl->wasAllocated = allocated;
 
@@ -571,32 +619,30 @@ static void onUnknownCommand(EmbeddedCli *cli, const char *name) {
     writeToOutput(cli, "\". Write \"help\" for a list of available commands\r\n");
 }
 
-static void onAutocompleteRequest(EmbeddedCli *cli) {
+static AutocompletedCommand getAutocompletedCommand(EmbeddedCli *cli, const char *prefix) {
+    AutocompletedCommand cmd = {NULL, 0, 0};
+
+    size_t prefixLen = strlen(prefix);
+
     PREPARE_IMPL(cli)
-
-    if (impl->bindingsCount == 0 || impl->cmdSize == 0)
-        return;
-
-
-    const char *autocomplete = NULL;
-    uint16_t candidateCount = 0;
-    // how many chars we can complete
-    size_t autocompleteLen = 0;
+    if (impl->bindingsCount == 0 || prefixLen == 0)
+        return cmd;
 
 
     for (int i = 0; i < impl->bindingsCount; ++i) {
-        const char *cmd = impl->bindings[i].name;
+        const char *name = impl->bindings[i].name;
+        size_t len = strlen(name);
 
-        size_t len = strlen(cmd);
+        // unset autocomplete flag
+        impl->bindingsFlags[i] &= ~BINDING_FLAG_AUTOCOMPLETE;
 
-        if (len < impl->cmdSize)
+        if (len < prefixLen)
             continue;
-
 
         // check if this command is candidate for autocomplete
         bool isCandidate = true;
-        for (int j = 0; j < impl->cmdSize; ++j) {
-            if (impl->cmdBuffer[j] != cmd[j]) {
+        for (int j = 0; j < prefixLen; ++j) {
+            if (prefix[j] != name[j]) {
                 isCandidate = false;
                 break;
             }
@@ -604,79 +650,86 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
         if (!isCandidate)
             continue;
 
-        if (candidateCount == 0 || len < autocompleteLen)
-            autocompleteLen = len;
+        impl->bindingsFlags[i] |= BINDING_FLAG_AUTOCOMPLETE;
 
-        ++candidateCount;
+        if (cmd.candidateCount == 0 || len < cmd.autocompletedLen)
+            cmd.autocompletedLen = len;
 
-        if (candidateCount == 1) {
-            autocomplete = cmd;
+        ++cmd.candidateCount;
+
+        if (cmd.candidateCount == 1) {
+            cmd.firstCandidate = name;
             continue;
         }
 
-        for (int j = impl->cmdSize; j < autocompleteLen; ++j) {
-            if (autocomplete[j] != cmd[j]) {
-                autocompleteLen = j;
+        for (int j = impl->cmdSize; j < cmd.autocompletedLen; ++j) {
+            if (cmd.firstCandidate[j] != name[j]) {
+                cmd.autocompletedLen = j;
                 break;
             }
         }
     }
 
-    if (candidateCount == 1) {
+    return cmd;
+}
+
+static void onAutocompleteRequest(EmbeddedCli *cli) {
+    PREPARE_IMPL(cli)
+
+    impl->cmdBuffer[impl->cmdSize] = '\0';
+    AutocompletedCommand cmd = getAutocompletedCommand(cli, impl->cmdBuffer);
+
+    if (cmd.candidateCount == 0)
+        return;
+
+    if (cmd.candidateCount == 1) {
         // complete command and insert space
-        for (int i = impl->cmdSize; i < autocompleteLen; ++i) {
-            char c = autocomplete[i];
+        for (int i = impl->cmdSize; i < cmd.autocompletedLen; ++i) {
+            char c = cmd.firstCandidate[i];
             cli->writeChar(cli, c);
             impl->cmdBuffer[i] = c;
         }
         cli->writeChar(cli, ' ');
-        impl->cmdBuffer[autocompleteLen] = ' ';
-        impl->cmdSize = autocompleteLen + 1;
-    } else if (candidateCount > 1) {
-        // with multiple candidates we either complete to common prefix
-        // or show all candidates if we already have common prefix
-        if (autocompleteLen == impl->cmdSize) {
-            bool firstPrinted = false;
+        impl->cmdBuffer[cmd.autocompletedLen] = ' ';
+        impl->cmdSize = cmd.autocompletedLen + 1;
+        return;
+    }
+    // cmd.candidateCount > 1
 
-            for (int i = 0; i < impl->bindingsCount; ++i) {
-                const char *cmd = impl->bindings[i].name;
-                size_t len = strlen(cmd);
-                if (len < impl->cmdSize)
-                    continue;
+    // with multiple candidates we either complete to common prefix
+    // or show all candidates if we already have common prefix
+    if (cmd.autocompletedLen == impl->cmdSize) {
+        bool firstPrinted = false;
 
-                // check if this command is candidate for autocomplete
-                bool isCandidate = true;
-                for (int j = 0; j < impl->cmdSize; ++j) {
-                    if (impl->cmdBuffer[j] != cmd[j]) {
-                        isCandidate = false;
-                        break;
-                    }
-                }
-                if (!isCandidate)
-                    continue;
+        for (int i = 0; i < impl->bindingsCount; ++i) {
+            // autocomplete flag is set for all candidates by last call to
+            // getAutocompletedCommand
+            if (!(impl->bindingsFlags[i] & BINDING_FLAG_AUTOCOMPLETE))
+                continue;
 
-                if (firstPrinted) {
-                    writeToOutput(cli, cmd);
-                } else {
-                    firstPrinted = true;
-                    // cmd begins with current cmdBuffer, so just print remaining
-                    writeToOutput(cli, &cmd[impl->cmdSize]);
-                }
+            const char *name = impl->bindings[i].name;
 
-                writeToOutput(cli, "\r\n");
+            if (firstPrinted) {
+                writeToOutput(cli, name);
+            } else {
+                firstPrinted = true;
+                // cmd begins with current cmdBuffer, so just print remaining
+                writeToOutput(cli, &name[impl->cmdSize]);
             }
 
-            impl->cmdBuffer[impl->cmdSize] = '\0';
-            writeToOutput(cli, impl->cmdBuffer);
-        } else {
-            // complete to common prefix
-            for (int i = impl->cmdSize; i < autocompleteLen; ++i) {
-                char c = autocomplete[i];
-                cli->writeChar(cli, c);
-                impl->cmdBuffer[i] = c;
-            }
-            impl->cmdSize = autocompleteLen;
+            writeToOutput(cli, "\r\n");
         }
+
+        impl->cmdBuffer[impl->cmdSize] = '\0';
+        writeToOutput(cli, impl->cmdBuffer);
+    } else {
+        // complete to common prefix
+        for (int i = impl->cmdSize; i < cmd.autocompletedLen; ++i) {
+            char c = cmd.firstCandidate[i];
+            cli->writeChar(cli, c);
+            impl->cmdBuffer[i] = c;
+        }
+        impl->cmdSize = cmd.autocompletedLen;
     }
 }
 
