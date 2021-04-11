@@ -151,6 +151,14 @@ struct EmbeddedCliConfig {
 EmbeddedCliConfig *embeddedCliDefaultConfig(void);
 
 /**
+ * Returns how many space in config buffer is required for cli creation
+ * If you provide buffer with less space, embeddedCliNew will return NULL
+ * @param config
+ * @return
+ */
+size_t embeddedCliRequiredSize(EmbeddedCliConfig *config);
+
+/**
  * Create new CLI.
  * Memory is allocated dynamically if cliBuffer in config is NULL.
  * After CLI is created, override function pointers to start using it

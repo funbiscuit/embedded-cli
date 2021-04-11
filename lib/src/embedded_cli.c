@@ -260,6 +260,15 @@ EmbeddedCliConfig *embeddedCliDefaultConfig(void) {
     return &defaultConfig;
 }
 
+size_t embeddedCliRequiredSize(EmbeddedCliConfig *config) {
+    uint16_t bindingCount = config->maxBindingCount + cliInternalBindingCount;
+    return sizeof(EmbeddedCli) + sizeof(EmbeddedCliImpl) +
+           config->rxBufferSize * sizeof(char) +
+           config->cmdBufferSize * sizeof(char) +
+           bindingCount * sizeof(CliCommandBinding) +
+           bindingCount * sizeof(uint8_t);
+}
+
 EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
     EmbeddedCli *cli = NULL;
 
