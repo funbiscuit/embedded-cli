@@ -9,6 +9,17 @@ void setVectorString(std::vector<char> &buffer, const std::string &str) {
     buffer[str.size()] = '\0';
 }
 
+std::string trimStrBack(const std::string &str) {
+    std::string res = str;
+    for (size_t i = res.size(); i > 0; --i) {
+        if (res[i - 1] == ' ')
+            res.pop_back();
+        else
+            break;
+    }
+    return res;
+}
+
 void runTestsForCli(EmbeddedCli *cli);
 
 TEST_CASE("EmbeddedCli", "[cli]") {
@@ -264,10 +275,44 @@ void runTestsForCli(EmbeddedCli *cli) {
             auto lines = mock.getLines(&cursor);
 
             REQUIRE(lines.size() == 2);
-            REQUIRE(lines[0] == "print");
+            REQUIRE(trimStrBack(lines[0]) == "print");
             REQUIRE(lines[1] == cmd);
             INFO("Cursor at the end of line with command")
             REQUIRE(cursor == cmd.length());
+        }
+
+        SECTION("Print with live autocompletion") {
+            mock.addCommandBinding("get");
+            mock.sendStr("g");
+
+            embeddedCliProcess(cli);
+
+            embeddedCliPrint(cli, "print");
+
+            size_t cursor = 0;
+            auto lines = mock.getLines(&cursor);
+
+            REQUIRE(lines.size() == 2);
+            REQUIRE(trimStrBack(lines[0]) == "print");
+            REQUIRE(lines[1] == "get");
+            REQUIRE(cursor == 1);
+        }
+
+        SECTION("Print with live autocompletion when printed text is short") {
+            mock.addCommandBinding("get");
+            mock.sendStr("g");
+
+            embeddedCliProcess(cli);
+
+            embeddedCliPrint(cli, "j");
+
+            size_t cursor = 0;
+            auto lines = mock.getLines(&cursor);
+
+            REQUIRE(lines.size() == 2);
+            REQUIRE(trimStrBack(lines[0]) == "j");
+            REQUIRE(lines[1] == "get");
+            REQUIRE(cursor == 1);
         }
     }
 
@@ -376,9 +421,13 @@ void runTestsForCli(EmbeddedCli *cli) {
 
             embeddedCliProcess(cli);
 
+            auto lines = mock.getLines();
+
             REQUIRE(commands.empty());
-            REQUIRE(mock.getRawOutput().find("Command \"help\" receives one or zero arguments") != std::string::npos);
-            REQUIRE(mock.getRawOutput().rfind("get") < 10);
+            REQUIRE(lines.size() == 3);
+            REQUIRE(lines[0] == "help get set");
+            REQUIRE(lines[1] == "Command \"help\" receives one or zero arguments");
+            REQUIRE(lines[2].empty());
         }
     }
 
@@ -501,6 +550,96 @@ void runTestsForCli(EmbeddedCli *cli) {
 
             REQUIRE(lines.size() == 1);
             REQUIRE(lines[0] == "m");
+            REQUIRE(cursor == 1);
+        }
+
+        SECTION("Live autocomplete when no candidates") {
+            mock.sendStr("m");
+
+            embeddedCliProcess(cli);
+
+            size_t cursor = 0;
+            auto lines = mock.getLines(&cursor);
+
+            REQUIRE(lines.size() == 1);
+            REQUIRE(lines[0] == "m");
+            REQUIRE(cursor == 1);
+        }
+
+        SECTION("Live autocomplete when more then one candidate") {
+            mock.sendStr("r");
+
+            embeddedCliProcess(cli);
+
+            size_t cursor = 0;
+            auto lines = mock.getLines(&cursor);
+
+            REQUIRE(lines.size() == 1);
+            REQUIRE(lines[0] == "reset-");
+            REQUIRE(cursor == 1);
+        }
+
+        SECTION("Live autocomplete one candidate") {
+            mock.sendStr("s");
+
+            embeddedCliProcess(cli);
+
+            size_t cursor = 0;
+            auto lines = mock.getLines(&cursor);
+
+            REQUIRE(lines.size() == 1);
+            REQUIRE(lines[0] == "set");
+            REQUIRE(cursor == 1);
+        }
+
+        SECTION("Live autocomplete when input changed to longer command") {
+            mock.sendStr("s");
+
+            embeddedCliProcess(cli);
+
+            mock.sendStr("\br");
+
+            embeddedCliProcess(cli);
+
+            size_t cursor = 0;
+            auto lines = mock.getLines(&cursor);
+
+            REQUIRE(lines.size() == 1);
+            REQUIRE(lines[0] == "reset-");
+            REQUIRE(cursor == 1);
+        }
+
+        SECTION("Live autocomplete when input changed to shorter command") {
+            mock.sendStr("r");
+
+            embeddedCliProcess(cli);
+
+            mock.sendStr("\bs");
+
+            embeddedCliProcess(cli);
+
+            size_t cursor = 0;
+            auto lines = mock.getLines(&cursor);
+
+            REQUIRE(lines.size() == 1);
+            REQUIRE(trimStrBack(lines[0]) == "set");
+            REQUIRE(cursor == 1);
+        }
+
+        SECTION("Live autocomplete when input changed to no autocompletion") {
+            mock.sendStr("r");
+
+            embeddedCliProcess(cli);
+
+            mock.sendStr("\bm");
+
+            embeddedCliProcess(cli);
+
+            size_t cursor = 0;
+            auto lines = mock.getLines(&cursor);
+
+            REQUIRE(lines.size() == 1);
+            REQUIRE(trimStrBack(lines[0]) == "m");
             REQUIRE(cursor == 1);
         }
     }

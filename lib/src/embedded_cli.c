@@ -76,6 +76,13 @@ struct EmbeddedCliImpl {
      */
     bool overflow;
 
+    /**
+     * Current length of live autocompletion. It might be longer than cmdSize
+     * so if autocompletion changes, we need to place space chars to clean up
+     * previous autocompletion
+     */
+    uint16_t liveAutocompletionLength;
+
     bool wasAllocated;
 };
 
@@ -161,6 +168,13 @@ static void onUnknownCommand(EmbeddedCli *cli, const char *name);
  * @return
  */
 static AutocompletedCommand getAutocompletedCommand(EmbeddedCli *cli, const char *prefix);
+
+/**
+ * Prints autocompletion result while keeping current command unchanged
+ * Prints only if autocompletion is present and only one candidate exists.
+ * @param cli
+ */
+static void printLiveAutocompletion(EmbeddedCli *cli);
 
 /**
  * Handles autocomplete request. If autocomplete possible - fills current
@@ -310,6 +324,8 @@ void embeddedCliProcess(EmbeddedCli *cli) {
             onCharInput(cli, c);
         }
 
+        printLiveAutocompletion(cli);
+
         impl->lastChar = c;
     }
 
@@ -335,16 +351,16 @@ void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
     PREPARE_IMPL(cli)
 
     size_t len = strlen(string);
-    size_t padLen = len >= impl->cmdSize ? 0 : impl->cmdSize - len;
+    // how many chars are currently printed (command + live autocompletion)
+    size_t liveLen = impl->cmdSize < impl->liveAutocompletionLength ?
+                     impl->liveAutocompletionLength : impl->cmdSize;
+    size_t padLen = len >= liveLen ? 0 : liveLen - len;
 
-    // remove all chars for current command from screen
-    for (int i = 0; i < impl->cmdSize; ++i) {
-        if (i < padLen) {
-            cli->writeChar(cli, '\b');
-            cli->writeChar(cli, ' ');
-        }
-        cli->writeChar(cli, '\b');
-    }
+    // remove chars for autocompletion and live command
+    cli->writeChar(cli, '\r');
+    for (int i = 0; i < liveLen; ++i)
+        cli->writeChar(cli, ' ');
+    cli->writeChar(cli, '\r');
 
     // print provided string
     writeToOutput(cli, string);
@@ -353,6 +369,8 @@ void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
     // print current command back to screen
     impl->cmdBuffer[impl->cmdSize] = '\0';
     writeToOutput(cli, impl->cmdBuffer);
+
+    printLiveAutocompletion(cli);
 }
 
 void embeddedCliFree(EmbeddedCli *cli) {
@@ -671,6 +689,39 @@ static AutocompletedCommand getAutocompletedCommand(EmbeddedCli *cli, const char
     }
 
     return cmd;
+}
+
+static void printLiveAutocompletion(EmbeddedCli *cli) {
+    PREPARE_IMPL(cli)
+
+    impl->cmdBuffer[impl->cmdSize] = '\0';
+    AutocompletedCommand cmd = getAutocompletedCommand(cli, impl->cmdBuffer);
+
+    if (cmd.candidateCount == 0) {
+        if (impl->liveAutocompletionLength > impl->cmdSize) {
+            for (int i = impl->cmdSize; i < impl->liveAutocompletionLength; ++i) {
+                cli->writeChar(cli, ' ');
+            }
+            cli->writeChar(cli, '\r');
+            writeToOutput(cli, impl->cmdBuffer);
+        }
+        impl->liveAutocompletionLength = 0;
+        return;
+    }
+
+    // print live autocompletion
+    for (int i = impl->cmdSize; i < cmd.autocompletedLen; ++i) {
+        cli->writeChar(cli, cmd.firstCandidate[i]);
+    }
+    // replace with spaces previous autocompletion
+    for (int i = cmd.autocompletedLen; i < impl->liveAutocompletionLength; ++i) {
+        cli->writeChar(cli, ' ');
+    }
+    impl->liveAutocompletionLength = cmd.autocompletedLen;
+    cli->writeChar(cli, '\r');
+    // print current command again so cursor is moved to initial place
+    writeToOutput(cli, impl->cmdBuffer);
+
 }
 
 static void onAutocompleteRequest(EmbeddedCli *cli) {

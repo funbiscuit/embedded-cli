@@ -56,7 +56,7 @@ std::vector<std::string> CliMock::getLines(size_t *cursorColumn, size_t *cursorR
     for (auto c : txQueue) {
         if (c == '\b') {
             if (cursorPosition > 0 && (cursorPosition - 1) < line.size()) {
-                line.erase(cursorPosition - 1);
+                line.erase(cursorPosition - 1, 1);
                 --cursorPosition;
             }
         } else if (c == '\r') {
@@ -66,6 +66,8 @@ std::vector<std::string> CliMock::getLines(size_t *cursorColumn, size_t *cursorR
             output.push_back(line);
             line.clear();
         } else {
+            if (line.size() > cursorPosition)
+                line.erase(cursorPosition, 1);
             line.insert(cursorPosition, 1, c);
             ++cursorPosition;
         }
