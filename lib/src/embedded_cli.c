@@ -193,7 +193,7 @@ static void writeToOutput(EmbeddedCli *cli, const char *str);
 
 /**
  * Returns true if provided char is a supported control char:
- * \r, \n or \b
+ * \r, \n, \b or 0x7F (treated as \b)
  * @param c
  * @return
  */
@@ -497,7 +497,7 @@ static void onControlInput(EmbeddedCli *cli, char c) {
         if (impl->cmdSize > 0)
             parseCommand(cli);
         impl->cmdSize = 0;
-    } else if (c == '\b' && impl->cmdSize > 0) {
+    } else if ((c == '\b' || c == 0x7F) && impl->cmdSize > 0) {
         // remove char from screen
         cli->writeChar(cli, '\b');
         cli->writeChar(cli, ' ');
@@ -793,7 +793,7 @@ static void writeToOutput(EmbeddedCli *cli, const char *str) {
 }
 
 static bool isControlChar(char c) {
-    return c == '\r' || c == '\n' || c == '\b' || c == '\t';
+    return c == '\r' || c == '\n' || c == '\b' || c == '\t' || c == 0x7F;
 }
 
 static bool isDisplayableChar(char c) {
