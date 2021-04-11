@@ -453,10 +453,10 @@ void embeddedCliTokenizeArgs(char *args) {
 }
 
 const char *embeddedCliGetToken(const char *tokenizedStr, uint8_t pos) {
-    if (tokenizedStr == NULL)
+    if (tokenizedStr == NULL || pos == 0)
         return NULL;
     int i = 0;
-    int tokenCount = 0;
+    int tokenCount = 1;
     while (true) {
         if (tokenCount == pos)
             break;
@@ -474,6 +474,19 @@ const char *embeddedCliGetToken(const char *tokenizedStr, uint8_t pos) {
         return &tokenizedStr[i];
     else
         return NULL;
+}
+
+uint8_t embeddedCliFindToken(const char *tokenizedStr, const char *token) {
+    if (tokenizedStr == NULL || token == NULL)
+        return 0;
+
+    uint8_t size = embeddedCliGetTokenCount(tokenizedStr);
+    for (int i = 0; i < size; ++i) {
+        if (strcmp(embeddedCliGetToken(tokenizedStr, i + 1), token) == 0)
+            return i + 1;
+    }
+
+    return 0;
 }
 
 uint8_t embeddedCliGetTokenCount(const char *tokenizedStr) {
@@ -632,7 +645,7 @@ static void onHelp(EmbeddedCli *cli, char *tokens, void *context) {
     } else if (tokenCount == 1) {
         // try find command
         const char *helpStr = NULL;
-        const char *cmdName = embeddedCliGetToken(tokens, 0);
+        const char *cmdName = embeddedCliGetToken(tokens, 1);
         bool found = false;
         for (int i = 0; i < impl->bindingsCount; ++i) {
             if (strcmp(impl->bindings[i].name, cmdName) == 0) {

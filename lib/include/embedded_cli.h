@@ -232,10 +232,19 @@ void embeddedCliTokenizeArgs(char *args);
 /**
  * Return specific token from tokenized string
  * @param tokenizedStr
- * @param pos
+ * @param pos (counted from 1)
  * @return token
  */
 const char *embeddedCliGetToken(const char *tokenizedStr, uint8_t pos);
+
+/**
+ * Find token in provided tokens string and return its position (counted from 1)
+ * If no such token is found - 0 is returned.
+ * @param tokenizedStr
+ * @param token - token to find
+ * @return position (increased by 1) or zero if no such token found
+ */
+uint8_t embeddedCliFindToken(const char *tokenizedStr, const char *token);
 
 /**
  * Return number of tokens in tokenized string
