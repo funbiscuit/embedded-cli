@@ -156,7 +156,7 @@ EmbeddedCliConfig *embeddedCliDefaultConfig(void);
  * @param config
  * @return
  */
-size_t embeddedCliRequiredSize(EmbeddedCliConfig *config);
+uint16_t embeddedCliRequiredSize(EmbeddedCliConfig *config);
 
 /**
  * Create new CLI.
