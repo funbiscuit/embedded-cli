@@ -101,7 +101,7 @@ void onCommand(EmbeddedCli *embeddedCli, CliCommand *command) {
         Serial.print(F("arg "));
         Serial.print((char) ('0' + i));
         Serial.print(F(": "));
-        Serial.println(embeddedCliGetToken(command->args, i));
+        Serial.println(embeddedCliGetToken(command->args, i + 1));
     }
 }
 
@@ -110,7 +110,7 @@ void onHello(EmbeddedCli *cli, char *args, void *context) {
     if (embeddedCliGetTokenCount(args) == 0)
         Serial.print((const char *) context);
     else
-        Serial.print(embeddedCliGetToken(args, 0));
+        Serial.print(embeddedCliGetToken(args, 1));
     Serial.print("\r\n");
 }
 

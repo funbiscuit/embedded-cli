@@ -123,7 +123,7 @@ void onCommand(const std::string &name, char *tokens) {
     std::cout << "Received command: " << name << "\n";
 
     for (int i = 0; i < embeddedCliGetTokenCount(tokens); ++i) {
-        std::cout << "Arg " << i << ": " << embeddedCliGetToken(tokens, i) << "\n";
+        std::cout << "Arg " << i << ": " << embeddedCliGetToken(tokens, i + 1) << "\n";
     }
 }
 
@@ -137,7 +137,7 @@ void onHello(EmbeddedCli *cli, char *args, void *context) {
     if (embeddedCliGetTokenCount(args) == 0)
         std::cout << (const char *) context;
     else
-        std::cout << embeddedCliGetToken(args, 0);
+        std::cout << embeddedCliGetToken(args, 1);
     std::cout << "\r\n";
 }
 
