@@ -197,6 +197,13 @@ static void printLiveAutocompletion(EmbeddedCli *cli);
 static void onAutocompleteRequest(EmbeddedCli *cli);
 
 /**
+ * Removes all input from current line (replaces it with whitespaces)
+ * And places cursor at the beginning of the line
+ * @param cli
+ */
+static void clearCurrentLine(EmbeddedCli *cli);
+
+/**
  * Write given string to cli output
  * @param cli
  * @param str
@@ -368,17 +375,8 @@ bool embeddedCliAddBinding(EmbeddedCli *cli, CliCommandBinding binding) {
 void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
     PREPARE_IMPL(cli)
 
-    // how many chars are currently printed (command + live autocompletion)
-    size_t liveLen = impl->cmdSize < impl->liveAutocompletionLength ?
-                     impl->liveAutocompletionLength : impl->cmdSize;
-    // account for invitation string
-    liveLen += strlen(impl->invitation);
-
     // remove chars for autocompletion and live command
-    cli->writeChar(cli, '\r');
-    for (int i = 0; i < liveLen; ++i)
-        cli->writeChar(cli, ' ');
-    cli->writeChar(cli, '\r');
+    clearCurrentLine(cli);
 
     // print provided string
     writeToOutput(cli, string);
@@ -719,10 +717,7 @@ static void printLiveAutocompletion(EmbeddedCli *cli) {
 
     if (cmd.candidateCount == 0) {
         if (impl->liveAutocompletionLength > impl->cmdSize) {
-            for (int i = impl->cmdSize; i < impl->liveAutocompletionLength; ++i) {
-                cli->writeChar(cli, ' ');
-            }
-            cli->writeChar(cli, '\r');
+            clearCurrentLine(cli);
             writeToOutput(cli, impl->invitation);
             writeToOutput(cli, impl->cmdBuffer);
         }
@@ -773,12 +768,7 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
     // or show all candidates if we already have common prefix
     if (cmd.autocompletedLen == impl->cmdSize) {
         // we need to completely clear current line since it begins with invitation
-        //TODO refactor to separate method
-        cli->writeChar(cli, '\r');
-        for (int i = 0; i < strlen(impl->invitation) + impl->cmdSize; ++i) {
-            cli->writeChar(cli, ' ');
-        }
-        cli->writeChar(cli, '\r');
+        clearCurrentLine(cli);
 
         for (int i = 0; i < impl->bindingsCount; ++i) {
             // autocomplete flag is set for all candidates by last call to
@@ -804,6 +794,21 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
         }
         impl->cmdSize = cmd.autocompletedLen;
     }
+}
+
+static void clearCurrentLine(EmbeddedCli *cli) {
+    PREPARE_IMPL(cli)
+    // how many chars are currently printed (command + live autocompletion)
+    size_t len = impl->cmdSize < impl->liveAutocompletionLength ?
+                 impl->liveAutocompletionLength : impl->cmdSize;
+    // account for invitation string
+    len += strlen(impl->invitation);
+
+    cli->writeChar(cli, '\r');
+    for (int i = 0; i < len; ++i) {
+        cli->writeChar(cli, ' ');
+    }
+    cli->writeChar(cli, '\r');
 }
 
 static void writeToOutput(EmbeddedCli *cli, const char *str) {
