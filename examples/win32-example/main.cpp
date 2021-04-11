@@ -74,6 +74,7 @@ int main() {
     std::cout << "Type \"help\" for a list of commands\r\n";
     std::cout << "Use backspace and tab to remove chars and autocomplete\r\n";
 
+    embeddedCliProcess(cli);
     auto lastUpdate = std::chrono::steady_clock::now();
     auto t0 = std::chrono::steady_clock::now();
 

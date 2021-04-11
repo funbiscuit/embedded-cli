@@ -47,7 +47,7 @@ std::string CliMock::getRawOutput() {
     return output;
 }
 
-std::vector<std::string> CliMock::getLines(size_t *cursorColumn, size_t *cursorRow) {
+std::vector<std::string> CliMock::getLines(bool trimBack, size_t *cursorColumn, size_t *cursorRow) {
     std::vector<std::string> output;
 
     std::string line;
@@ -73,6 +73,12 @@ std::vector<std::string> CliMock::getLines(size_t *cursorColumn, size_t *cursorR
         }
     }
     output.push_back(line);
+
+    if (trimBack) {
+        for (auto &l : output) {
+            trimStr(l);
+        }
+    }
 
     if (cursorRow != nullptr)
         *cursorRow = output.size() - 1;
@@ -103,4 +109,13 @@ void CliMock::onBoundCommand(Command command) {
 
 void CliMock::writeChar(char c) {
     txQueue.push_back(c);
+}
+
+void CliMock::trimStr(std::string &str) {
+    for (size_t i = str.size(); i > 0; --i) {
+        if (str[i - 1] == ' ')
+            str.pop_back();
+        else
+            break;
+    }
 }

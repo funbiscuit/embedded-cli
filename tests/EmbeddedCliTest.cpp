@@ -9,17 +9,6 @@ void setVectorString(std::vector<char> &buffer, const std::string &str) {
     buffer[str.size()] = '\0';
 }
 
-std::string trimStrBack(const std::string &str) {
-    std::string res = str;
-    for (size_t i = res.size(); i > 0; --i) {
-        if (res[i - 1] == ' ')
-            res.pop_back();
-        else
-            break;
-    }
-    return res;
-}
-
 void runTestsForCli(EmbeddedCli *cli);
 
 TEST_CASE("EmbeddedCli", "[cli]") {
@@ -174,6 +163,8 @@ void runTestsForCli(EmbeddedCli *cli) {
     CliMock mock(cli);
     auto &commands = mock.getReceivedCommands();
 
+    embeddedCliProcess(cli);
+
     SECTION("Test single command") {
         for (int i = 0; i < 50; ++i) {
             mock.sendLine("set led 1 " + std::to_string(i));
@@ -245,6 +236,12 @@ void runTestsForCli(EmbeddedCli *cli) {
 
         embeddedCliProcess(cli);
 
+        auto lines = mock.getLines(false);
+
+        REQUIRE(lines.size() == 2);
+        REQUIRE(lines[0] == "> get led");
+        REQUIRE(lines[1] == "> ");
+
         REQUIRE(commands.back().name == "get");
         REQUIRE(commands.back().args == "led");
     }
@@ -254,13 +251,13 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliPrint(cli, "test print");
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 2);
             REQUIRE(lines[0] == "test print");
-            REQUIRE(lines[1].empty());
-            INFO("Cursor at beginning of empty line")
-            REQUIRE(cursor == 0);
+            REQUIRE(lines[1] == ">"); // space is trimmed
+            INFO("Cursor at the end of invitation line")
+            REQUIRE(cursor == 2);
         }
 
         SECTION("Print with intermediate command") {
@@ -272,13 +269,13 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliPrint(cli, "print");
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 2);
-            REQUIRE(trimStrBack(lines[0]) == "print");
-            REQUIRE(lines[1] == cmd);
-            INFO("Cursor at the end of line with command")
-            REQUIRE(cursor == cmd.length());
+            REQUIRE(lines[0] == "print");
+            REQUIRE(lines[1] == "> " + cmd);
+            INFO("Cursor at the end of invitation line")
+            REQUIRE(cursor == 2 + cmd.length());
         }
 
         SECTION("Print with live autocompletion") {
@@ -290,12 +287,12 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliPrint(cli, "print");
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 2);
-            REQUIRE(trimStrBack(lines[0]) == "print");
-            REQUIRE(lines[1] == "get");
-            REQUIRE(cursor == 1);
+            REQUIRE(lines[0] == "print");
+            REQUIRE(lines[1] == "> get");
+            REQUIRE(cursor == 3);
         }
 
         SECTION("Print with live autocompletion when printed text is short") {
@@ -307,12 +304,12 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliPrint(cli, "j");
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 2);
-            REQUIRE(trimStrBack(lines[0]) == "j");
-            REQUIRE(lines[1] == "get");
-            REQUIRE(cursor == 1);
+            REQUIRE(lines[0] == "j");
+            REQUIRE(lines[1] == "> get");
+            REQUIRE(cursor == 3);
         }
     }
 
@@ -421,13 +418,13 @@ void runTestsForCli(EmbeddedCli *cli) {
 
             embeddedCliProcess(cli);
 
-            auto lines = mock.getLines();
+            auto lines = mock.getLines(false);
 
             REQUIRE(commands.empty());
             REQUIRE(lines.size() == 3);
-            REQUIRE(lines[0] == "help get set");
+            REQUIRE(lines[0] == "> help get set");
             REQUIRE(lines[1] == "Command \"help\" receives one or zero arguments");
-            REQUIRE(lines[2].empty());
+            REQUIRE(lines[2] == "> ");
         }
     }
 
@@ -444,11 +441,11 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 1);
-            REQUIRE(lines[0] == "set ");
-            REQUIRE(cursor == 4);
+            REQUIRE(lines[0] == "> set");
+            REQUIRE(cursor == 6);
         }
 
         SECTION("Submit autocompleted command") {
@@ -475,11 +472,11 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 1);
-            REQUIRE(lines[0] == "help ");
-            REQUIRE(cursor == 5);
+            REQUIRE(lines[0] == "> help");
+            REQUIRE(cursor == 7);
         }
 
         SECTION("Autocomplete when multiple candidates with common prefix") {
@@ -488,11 +485,11 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 1);
-            REQUIRE(lines[0] == "get");
-            REQUIRE(cursor == 3);
+            REQUIRE(lines[0] == "> get");
+            REQUIRE(cursor == 5);
         }
 
         SECTION("Autocomplete when multiple candidates with common prefix and not common suffix") {
@@ -501,11 +498,11 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 1);
-            REQUIRE(lines[0] == "reset-");
-            REQUIRE(cursor == 6);
+            REQUIRE(lines[0] == "> reset-");
+            REQUIRE(cursor == 8);
         }
 
         SECTION("Autocomplete when multiple candidates and one is help") {
@@ -516,13 +513,13 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 3);
             REQUIRE(lines[0] == "help");
             REQUIRE(lines[1] == "hello");
-            REQUIRE(lines[2] == "hel");
-            REQUIRE(cursor == 3);
+            REQUIRE(lines[2] == "> hel");
+            REQUIRE(cursor == 5);
         }
 
         SECTION("Autocomplete when multiple candidates without common prefix") {
@@ -531,13 +528,13 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 3);
             REQUIRE(lines[0] == "get");
             REQUIRE(lines[1] == "get-new");
-            REQUIRE(lines[2] == "get");
-            REQUIRE(cursor == 3);
+            REQUIRE(lines[2] == "> get");
+            REQUIRE(cursor == 5);
         }
 
         SECTION("Autocomplete when no candidates") {
@@ -546,11 +543,11 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 1);
-            REQUIRE(lines[0] == "m");
-            REQUIRE(cursor == 1);
+            REQUIRE(lines[0] == "> m");
+            REQUIRE(cursor == 3);
         }
 
         SECTION("Live autocomplete when no candidates") {
@@ -559,11 +556,11 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 1);
-            REQUIRE(lines[0] == "m");
-            REQUIRE(cursor == 1);
+            REQUIRE(lines[0] == "> m");
+            REQUIRE(cursor == 3);
         }
 
         SECTION("Live autocomplete when more then one candidate") {
@@ -572,11 +569,11 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 1);
-            REQUIRE(lines[0] == "reset-");
-            REQUIRE(cursor == 1);
+            REQUIRE(lines[0] == "> reset-");
+            REQUIRE(cursor == 3);
         }
 
         SECTION("Live autocomplete one candidate") {
@@ -585,11 +582,11 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 1);
-            REQUIRE(lines[0] == "set");
-            REQUIRE(cursor == 1);
+            REQUIRE(lines[0] == "> set");
+            REQUIRE(cursor == 3);
         }
 
         SECTION("Live autocomplete when input changed to longer command") {
@@ -602,11 +599,11 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 1);
-            REQUIRE(lines[0] == "reset-");
-            REQUIRE(cursor == 1);
+            REQUIRE(lines[0] == "> reset-");
+            REQUIRE(cursor == 3);
         }
 
         SECTION("Live autocomplete when input changed to shorter command") {
@@ -619,11 +616,11 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 1);
-            REQUIRE(trimStrBack(lines[0]) == "set");
-            REQUIRE(cursor == 1);
+            REQUIRE(lines[0] == "> set");
+            REQUIRE(cursor == 3);
         }
 
         SECTION("Live autocomplete when input changed to no autocompletion") {
@@ -636,11 +633,11 @@ void runTestsForCli(EmbeddedCli *cli) {
             embeddedCliProcess(cli);
 
             size_t cursor = 0;
-            auto lines = mock.getLines(&cursor);
+            auto lines = mock.getLines(true, &cursor);
 
             REQUIRE(lines.size() == 1);
-            REQUIRE(trimStrBack(lines[0]) == "m");
-            REQUIRE(cursor == 1);
+            REQUIRE(lines[0] == "> m");
+            REQUIRE(cursor == 3);
         }
     }
 }

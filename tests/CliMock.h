@@ -47,11 +47,13 @@ public:
      * \b removes character
      * \r returns to the beginning of line (without removing chars)
      * \n moves to new line
+     * @param trimBack - whether to remove spaces at the end of the line
      * @param cursorColumn - output column of cursor position
      * @param cursorRow - output row of cursor position
      * @return vector of lines
      */
-    std::vector<std::string> getLines(size_t *cursorColumn = nullptr, size_t *cursorRow = nullptr);
+    std::vector<std::string>
+    getLines(bool trimBack = true, size_t *cursorColumn = nullptr, size_t *cursorRow = nullptr);
 
     std::vector<Command> &getReceivedCommands();
 
@@ -83,6 +85,8 @@ private:
     void onBoundCommand(Command command);
 
     void writeChar(char c);
+
+    static void trimStr(std::string &str);
 };
 
 

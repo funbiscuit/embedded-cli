@@ -34,6 +34,18 @@ struct FifoBuf {
 
 struct EmbeddedCliImpl {
     /**
+     * Invitation string. Is printed at the beginning of each line with user
+     * input
+     */
+    const char *invitation;
+
+    /**
+     * We need to print initial invitation but can't do that in constructor.
+     * So upon first call to process we print it and set this flag to true
+     */
+    bool initialInvitationPrinted;
+
+    /**
      * Buffer for storing received chars.
      * Chars are stored in FIFO mode.
      */
@@ -294,6 +306,7 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
     impl->maxBindingsCount = config->maxBindingCount + cliInternalBindingCount;
     impl->lastChar = '\0';
     impl->overflow = false;
+    impl->invitation = "> ";
 
     initInternalBindings(cli);
 
@@ -314,6 +327,11 @@ void embeddedCliReceiveChar(EmbeddedCli *cli, char c) {
 
 void embeddedCliProcess(EmbeddedCli *cli) {
     PREPARE_IMPL(cli)
+
+    if (!impl->initialInvitationPrinted) {
+        impl->initialInvitationPrinted = true;
+        writeToOutput(cli, impl->invitation);
+    }
 
     while (fifoBufAvailable(&impl->rxBuffer)) {
         char c = fifoBufPop(&impl->rxBuffer);
@@ -350,11 +368,11 @@ bool embeddedCliAddBinding(EmbeddedCli *cli, CliCommandBinding binding) {
 void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
     PREPARE_IMPL(cli)
 
-    size_t len = strlen(string);
     // how many chars are currently printed (command + live autocompletion)
     size_t liveLen = impl->cmdSize < impl->liveAutocompletionLength ?
                      impl->liveAutocompletionLength : impl->cmdSize;
-    size_t padLen = len >= liveLen ? 0 : liveLen - len;
+    // account for invitation string
+    liveLen += strlen(impl->invitation);
 
     // remove chars for autocompletion and live command
     cli->writeChar(cli, '\r');
@@ -368,6 +386,7 @@ void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
 
     // print current command back to screen
     impl->cmdBuffer[impl->cmdSize] = '\0';
+    writeToOutput(cli, impl->invitation);
     writeToOutput(cli, impl->cmdBuffer);
 
     printLiveAutocompletion(cli);
@@ -491,12 +510,13 @@ static void onControlInput(EmbeddedCli *cli, char c) {
         return;
 
     if (c == '\r' || c == '\n') {
-        cli->writeChar(cli, '\r');
-        cli->writeChar(cli, '\n');
+        writeToOutput(cli, "\r\n");
 
         if (impl->cmdSize > 0)
             parseCommand(cli);
         impl->cmdSize = 0;
+
+        writeToOutput(cli, impl->invitation);
     } else if ((c == '\b' || c == 0x7F) && impl->cmdSize > 0) {
         // remove char from screen
         cli->writeChar(cli, '\b');
@@ -703,6 +723,7 @@ static void printLiveAutocompletion(EmbeddedCli *cli) {
                 cli->writeChar(cli, ' ');
             }
             cli->writeChar(cli, '\r');
+            writeToOutput(cli, impl->invitation);
             writeToOutput(cli, impl->cmdBuffer);
         }
         impl->liveAutocompletionLength = 0;
@@ -720,6 +741,7 @@ static void printLiveAutocompletion(EmbeddedCli *cli) {
     impl->liveAutocompletionLength = cmd.autocompletedLen;
     cli->writeChar(cli, '\r');
     // print current command again so cursor is moved to initial place
+    writeToOutput(cli, impl->invitation);
     writeToOutput(cli, impl->cmdBuffer);
 
 }
@@ -750,7 +772,13 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
     // with multiple candidates we either complete to common prefix
     // or show all candidates if we already have common prefix
     if (cmd.autocompletedLen == impl->cmdSize) {
-        bool firstPrinted = false;
+        // we need to completely clear current line since it begins with invitation
+        //TODO refactor to separate method
+        cli->writeChar(cli, '\r');
+        for (int i = 0; i < strlen(impl->invitation) + impl->cmdSize; ++i) {
+            cli->writeChar(cli, ' ');
+        }
+        cli->writeChar(cli, '\r');
 
         for (int i = 0; i < impl->bindingsCount; ++i) {
             // autocomplete flag is set for all candidates by last call to
@@ -760,18 +788,12 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
 
             const char *name = impl->bindings[i].name;
 
-            if (firstPrinted) {
-                writeToOutput(cli, name);
-            } else {
-                firstPrinted = true;
-                // cmd begins with current cmdBuffer, so just print remaining
-                writeToOutput(cli, &name[impl->cmdSize]);
-            }
-
+            writeToOutput(cli, name);
             writeToOutput(cli, "\r\n");
         }
 
         impl->cmdBuffer[impl->cmdSize] = '\0';
+        writeToOutput(cli, impl->invitation);
         writeToOutput(cli, impl->cmdBuffer);
     } else {
         // complete to common prefix
