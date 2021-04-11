@@ -47,19 +47,37 @@ std::string CliMock::getRawOutput() {
     return output;
 }
 
-std::string CliMock::getOutput() {
-    std::vector<char> output;
+std::vector<std::string> CliMock::getLines(size_t *cursorColumn, size_t *cursorRow) {
+    std::vector<std::string> output;
+
+    std::string line;
+    size_t cursorPosition = 0;
 
     for (auto c : txQueue) {
         if (c == '\b') {
-            if (!output.empty())
-                output.pop_back();
+            if (cursorPosition > 0 && (cursorPosition - 1) < line.size()) {
+                line.erase(cursorPosition - 1);
+                --cursorPosition;
+            }
+        } else if (c == '\r') {
+            cursorPosition = 0;
+        } else if (c == '\n') {
+            cursorPosition = 0;
+            output.push_back(line);
+            line.clear();
         } else {
-            output.push_back(c);
+            line.insert(cursorPosition, 1, c);
+            ++cursorPosition;
         }
     }
-    output.push_back('\0');
-    return output.data();
+    output.push_back(line);
+
+    if (cursorRow != nullptr)
+        *cursorRow = output.size() - 1;
+    if (cursorColumn != nullptr)
+        *cursorColumn = cursorPosition;
+
+    return output;
 }
 
 std::vector<CliMock::Command> &CliMock::getReceivedCommands() {

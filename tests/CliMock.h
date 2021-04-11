@@ -43,11 +43,15 @@ public:
     std::string getRawOutput();
 
     /**
-     * Return processed output of cli
-     * \b removes previos character
-     * @return
+     * Returns processed output as individual lines
+     * \b removes character
+     * \r returns to the beginning of line (without removing chars)
+     * \n moves to new line
+     * @param cursorColumn - output column of cursor position
+     * @param cursorRow - output row of cursor position
+     * @return vector of lines
      */
-    std::string getOutput();
+    std::vector<std::string> getLines(size_t *cursorColumn = nullptr, size_t *cursorRow = nullptr);
 
     std::vector<Command> &getReceivedCommands();
 
