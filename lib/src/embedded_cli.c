@@ -36,6 +36,12 @@
  */
 #define CLI_FLAG_ALLOCATED 0x04u
 
+/**
+ * Indicates that CLI structure and internal structures were allocated with
+ * malloc and should bre freed
+ */
+#define CLI_FLAG_ESCAPE_MODE 0x08u
+
 typedef struct EmbeddedCliImpl EmbeddedCliImpl;
 typedef struct AutocompletedCommand AutocompletedCommand;
 typedef struct FifoBuf FifoBuf;
@@ -144,6 +150,14 @@ static EmbeddedCliConfig defaultConfig;
 static const uint16_t cliInternalBindingCount = 1;
 
 static const char *lineBreak = "\r\n";
+
+/**
+ * Process escaped character. After receiving ESC+[ sequence, all chars up to
+ * ending character are sent to this function
+ * @param cli
+ * @param c
+ */
+static void onEscapedInput(EmbeddedCli *cli, char c);
 
 /**
  * Process input character. Character is valid displayable char and should be
@@ -370,7 +384,12 @@ void embeddedCliProcess(EmbeddedCli *cli) {
     while (fifoBufAvailable(&impl->rxBuffer)) {
         char c = fifoBufPop(&impl->rxBuffer);
 
-        if (isControlChar(c)) {
+        if (IS_FLAG_SET(impl->flags, CLI_FLAG_ESCAPE_MODE)) {
+            onEscapedInput(cli, c);
+        } else if (impl->lastChar == 0x1B && c == '[') {
+            //enter escape mode
+            SET_FLAG(impl->flags, CLI_FLAG_ESCAPE_MODE);
+        } else if (isControlChar(c)) {
             onControlInput(cli, c);
         } else if (isDisplayableChar(c)) {
             onCharInput(cli, c);
@@ -523,6 +542,15 @@ uint8_t embeddedCliGetTokenCount(const char *tokenizedStr) {
     }
 
     return tokenCount;
+}
+
+static void onEscapedInput(EmbeddedCli *cli, char c) {
+    PREPARE_IMPL(cli)
+
+    if (c >= 64 && c <= 126) {
+        // handle escape sequence
+        UNSET_FLAG(impl->flags, CLI_FLAG_ESCAPE_MODE);
+    }
 }
 
 static void onCharInput(EmbeddedCli *cli, char c) {

@@ -521,4 +521,19 @@ void runTestsForCli(EmbeddedCli *cli) {
             REQUIRE(cursor == 3);
         }
     }
+
+    SECTION("Escape sequences") {
+        SECTION("Escape sequences don't show up in output") {
+
+            mock.sendStr("t\x1B[Ae\x1B[10As\x1B[Bt\x1B[C\x1B[D1");
+
+            embeddedCliProcess(cli);
+
+            size_t cursor = 0;
+            auto lines = mock.getLines(true, &cursor);
+            REQUIRE(lines.size() == 1);
+            REQUIRE(lines[0] == "> test1");
+            REQUIRE(cursor == 7);
+        }
+    }
 }
