@@ -289,7 +289,7 @@ void runTestsForCli(EmbeddedCli *cli) {
 
             REQUIRE(commands.empty());
             REQUIRE(mock.getRawOutput().find("get") != std::string::npos);
-            REQUIRE(mock.getRawOutput().find("No help") != std::string::npos);
+            REQUIRE(mock.getRawOutput().find("Help is not available") != std::string::npos);
         }
 
         SECTION("Calling help with multiple arguments") {

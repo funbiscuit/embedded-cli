@@ -6,11 +6,35 @@
 #define PREPARE_IMPL(t) \
   EmbeddedCliImpl* impl = (EmbeddedCliImpl*)t->_impl;
 
+#define IS_FLAG_SET(flags, flag) (((flags) & (flag)) != 0)
+
+#define SET_FLAG(flags, flag) ((flags) |= (flag))
+
+#define UNSET_FLAG(flags, flag) ((flags) &= ~(flag))
+
 /**
  * Marks binding as candidate for autocompletion
  * This flag is updated each time getAutocompletedCommand is called
  */
 #define BINDING_FLAG_AUTOCOMPLETE 1u
+
+/**
+ * Indicates that rx buffer overflow happened. In such case last command
+ * that wasn't finished (no \r or \n were received) will be discarded
+ */
+#define CLI_FLAG_OVERFLOW 0x01u
+
+/**
+ * Indicates that initialization is completed. Initialization is completed in
+ * first call to process and needed, for example, to print invitation message.
+ */
+#define CLI_FLAG_INIT_COMPLETE 0x02u
+
+/**
+ * Indicates that CLI structure and internal structures were allocated with
+ * malloc and should bre freed
+ */
+#define CLI_FLAG_ALLOCATED 0x04u
 
 typedef struct EmbeddedCliImpl EmbeddedCliImpl;
 typedef struct AutocompletedCommand AutocompletedCommand;
@@ -38,12 +62,6 @@ struct EmbeddedCliImpl {
      * input
      */
     const char *invitation;
-
-    /**
-     * We need to print initial invitation but can't do that in constructor.
-     * So upon first call to process we print it and set this flag to true
-     */
-    bool initialInvitationPrinted;
 
     /**
      * Buffer for storing received chars.
@@ -83,19 +101,16 @@ struct EmbeddedCliImpl {
     char lastChar;
 
     /**
-     * Indicates that rx buffer overflow happened. In such case last command
-     * that wasn't finished (no \r or \n were received) will be discarded
-     */
-    bool overflow;
-
-    /**
      * Current length of live autocompletion. It might be longer than cmdSize
      * so if autocompletion changes, we need to place space chars to clean up
      * previous autocompletion
      */
     uint16_t liveAutocompletionLength;
 
-    bool wasAllocated;
+    /**
+     * Flags are defined as CLI_FLAG_*
+     */
+    uint8_t flags;
 };
 
 struct AutocompletedCommand {
@@ -314,7 +329,8 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
 
     impl->bindingsFlags = buf;
 
-    impl->wasAllocated = allocated;
+    if (allocated)
+        SET_FLAG(impl->flags, CLI_FLAG_ALLOCATED);
 
     impl->rxBuffer.size = config->rxBufferSize;
     impl->rxBuffer.front = 0;
@@ -323,7 +339,6 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
     impl->bindingsCount = 0;
     impl->maxBindingsCount = config->maxBindingCount + cliInternalBindingCount;
     impl->lastChar = '\0';
-    impl->overflow = false;
     impl->invitation = "> ";
 
     initInternalBindings(cli);
@@ -339,15 +354,16 @@ void embeddedCliReceiveChar(EmbeddedCli *cli, char c) {
     PREPARE_IMPL(cli)
 
     if (!fifoBufPush(&impl->rxBuffer, c)) {
-        impl->overflow = true;
+        SET_FLAG(impl->flags, CLI_FLAG_OVERFLOW);
     }
 }
 
 void embeddedCliProcess(EmbeddedCli *cli) {
     PREPARE_IMPL(cli)
 
-    if (!impl->initialInvitationPrinted) {
-        impl->initialInvitationPrinted = true;
+
+    if (!IS_FLAG_SET(impl->flags, CLI_FLAG_INIT_COMPLETE)) {
+        SET_FLAG(impl->flags, CLI_FLAG_INIT_COMPLETE);
         writeToOutput(cli, impl->invitation);
     }
 
@@ -366,9 +382,9 @@ void embeddedCliProcess(EmbeddedCli *cli) {
     }
 
     // discard unfinished command if overflow happened
-    if (impl->overflow) {
+    if (IS_FLAG_SET(impl->flags, CLI_FLAG_OVERFLOW)) {
         impl->cmdSize = 0;
-        impl->overflow = false;
+        UNSET_FLAG(impl->flags, CLI_FLAG_OVERFLOW);
     }
 }
 
@@ -403,7 +419,7 @@ void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
 
 void embeddedCliFree(EmbeddedCli *cli) {
     PREPARE_IMPL(cli)
-    if (impl->wasAllocated) {
+    if (IS_FLAG_SET(impl->flags, CLI_FLAG_ALLOCATED)) {
         // allocation is done in single call to malloc, so need only single free
         free(cli);
     }
