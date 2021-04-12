@@ -128,6 +128,8 @@ static EmbeddedCliConfig defaultConfig;
  */
 static const uint16_t cliInternalBindingCount = 1;
 
+static const char *lineBreak = "\r\n";
+
 /**
  * Process input character. Character is valid displayable char and should be
  * added to current command string and displayed to client.
@@ -389,7 +391,7 @@ void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
 
     // print provided string
     writeToOutput(cli, string);
-    writeToOutput(cli, "\r\n");
+    writeToOutput(cli, lineBreak);
 
     // print current command back to screen
     impl->cmdBuffer[impl->cmdSize] = '\0';
@@ -530,7 +532,7 @@ static void onControlInput(EmbeddedCli *cli, char c) {
         return;
 
     if (c == '\r' || c == '\n') {
-        writeToOutput(cli, "\r\n");
+        writeToOutput(cli, lineBreak);
 
         if (impl->cmdSize > 0)
             parseCommand(cli);
@@ -627,20 +629,22 @@ static void onHelp(EmbeddedCli *cli, char *tokens, void *context) {
     PREPARE_IMPL(cli)
 
     if (impl->bindingsCount == 0) {
-        writeToOutput(cli, "Help is not available\r\n");
+        writeToOutput(cli, "Help is not available");
+        writeToOutput(cli, lineBreak);
         return;
     }
 
     uint8_t tokenCount = embeddedCliGetTokenCount(tokens);
     if (tokenCount == 0) {
-        writeToOutput(cli, "Available commands:\r\n");
+        writeToOutput(cli, "Available commands:");
+        writeToOutput(cli, lineBreak);
         for (int i = 0; i < impl->bindingsCount; ++i) {
             writeToOutput(cli, impl->bindings[i].name);
             if (impl->bindings[i].help != NULL) {
                 writeToOutput(cli, ": ");
                 writeToOutput(cli, impl->bindings[i].help);
             }
-            writeToOutput(cli, "\r\n");
+            writeToOutput(cli, lineBreak);
         }
     } else if (tokenCount == 1) {
         // try find command
@@ -658,23 +662,26 @@ static void onHelp(EmbeddedCli *cli, char *tokens, void *context) {
             writeToOutput(cli, cmdName);
             writeToOutput(cli, ": ");
             writeToOutput(cli, helpStr);
-            writeToOutput(cli, "\r\n");
+            writeToOutput(cli, lineBreak);
         } else if (found) {
             writeToOutput(cli, "No help is available for command \"");
             writeToOutput(cli, cmdName);
-            writeToOutput(cli, "\"\r\n");
+            cli->writeChar(cli, '\"');
+            writeToOutput(cli, lineBreak);
         } else {
             onUnknownCommand(cli, cmdName);
         }
     } else {
-        writeToOutput(cli, "Command \"help\" receives one or zero arguments\r\n");
+        writeToOutput(cli, "Command \"help\" receives one or zero arguments");
+        writeToOutput(cli, lineBreak);
     }
 }
 
 static void onUnknownCommand(EmbeddedCli *cli, const char *name) {
     writeToOutput(cli, "Unknown command: \"");
     writeToOutput(cli, name);
-    writeToOutput(cli, "\". Write \"help\" for a list of available commands\r\n");
+    writeToOutput(cli, "\". Write \"help\" for a list of available commands");
+    writeToOutput(cli, lineBreak);
 }
 
 static AutocompletedCommand getAutocompletedCommand(EmbeddedCli *cli, const char *prefix) {
@@ -801,7 +808,7 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
             const char *name = impl->bindings[i].name;
 
             writeToOutput(cli, name);
-            writeToOutput(cli, "\r\n");
+            writeToOutput(cli, lineBreak);
         }
 
         impl->cmdBuffer[impl->cmdSize] = '\0';
