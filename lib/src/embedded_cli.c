@@ -45,6 +45,7 @@
 typedef struct EmbeddedCliImpl EmbeddedCliImpl;
 typedef struct AutocompletedCommand AutocompletedCommand;
 typedef struct FifoBuf FifoBuf;
+typedef struct CliHistory CliHistory;
 
 struct FifoBuf {
     char *buf;
@@ -62,12 +63,33 @@ struct FifoBuf {
     uint16_t size;
 };
 
+struct CliHistory {
+    /**
+     * Items in buffer are separated by null-chars
+     */
+    char *buf;
+
+    /**
+     * Total size of buffer
+     */
+    uint16_t bufferSize;
+
+    /**
+     * Number of items in buffer
+     * Items are counted from top to bottom (and are 1 based).
+     * So the most recent item is 1 and the oldest is itemCount.
+     */
+    uint16_t itemsCount;
+};
+
 struct EmbeddedCliImpl {
     /**
      * Invitation string. Is printed at the beginning of each line with user
      * input
      */
     const char *invitation;
+
+    CliHistory history;
 
     /**
      * Buffer for storing received chars.
@@ -282,9 +304,31 @@ static char fifoBufPop(FifoBuf *buffer);
  */
 static bool fifoBufPush(FifoBuf *buffer, char a);
 
+/**
+ * Copy provided string to the history buffer.
+ * If it is already inside history, it will be removed from it and added again.
+ * So after addition, it will always be on top
+ * If available size is not enough (and total size is enough) old elements will
+ * be removed from history so this item can be put to it
+ * @param history
+ * @param str
+ * @return true if string was put in history
+ */
+static bool historyPut(CliHistory *history, const char *str);
+
+/**
+ * Get item from history. Items are counted from 1 so if item is 0 or greater
+ * than itemCount, NULL is returned
+ * @param history
+ * @param item
+ * @return true if string was put in history
+ */
+static const char *historyGet(CliHistory *history, uint16_t item);
+
 EmbeddedCliConfig *embeddedCliDefaultConfig(void) {
     defaultConfig.rxBufferSize = 64;
     defaultConfig.cmdBufferSize = 64;
+    defaultConfig.historyBufferSize = 128;
     defaultConfig.cliBuffer = NULL;
     defaultConfig.cliBufferSize = 0;
     defaultConfig.maxBindingCount = 8;
@@ -296,6 +340,7 @@ uint16_t embeddedCliRequiredSize(EmbeddedCliConfig *config) {
     return sizeof(EmbeddedCli) + sizeof(EmbeddedCliImpl) +
            config->rxBufferSize * sizeof(char) +
            config->cmdBufferSize * sizeof(char) +
+           config->historyBufferSize * sizeof(char) +
            bindingCount * sizeof(CliCommandBinding) +
            bindingCount * sizeof(uint8_t);
 }
@@ -305,11 +350,7 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
 
     uint16_t bindingCount = config->maxBindingCount + cliInternalBindingCount;
 
-    size_t totalSize = sizeof(EmbeddedCli) + sizeof(EmbeddedCliImpl) +
-                       config->rxBufferSize * sizeof(char) +
-                       config->cmdBufferSize * sizeof(char) +
-                       bindingCount * sizeof(CliCommandBinding) +
-                       bindingCount * sizeof(uint8_t);
+    size_t totalSize = embeddedCliRequiredSize(config);
 
     bool allocated = false;
     if (config->cliBuffer == NULL) {
@@ -924,4 +965,43 @@ static bool fifoBufPush(FifoBuf *buffer, char a) {
         return true;
     }
     return false;
+}
+
+static bool historyPut(CliHistory *history, const char *str) {
+    size_t len = strlen(str);
+    // each item is ended with \0 so, need to have that much space at least
+    if (history->bufferSize < len + 1)
+        return false;
+
+    size_t usedSize;
+    // remove old items if new one can't fit into buffer
+    while (true) {
+        const char *item = historyGet(history, history->itemsCount);
+        size_t itemLen = strlen(item);
+        usedSize = (item - history->buf) + itemLen + 1;
+
+        size_t freeSpace = history->bufferSize - usedSize;
+
+        if (freeSpace >= len + 1)
+            break;
+
+        // space not enough, remove last element
+        --history->itemsCount;
+    }
+    if (history->itemsCount > 0) {
+        // when history not empty, shift elements so new item is first
+        memmove(&history->buf[len + 1], history->buf, usedSize);
+    }
+    memcpy(history->buf, str, len + 1);
+
+    return true;
+}
+
+static const char *historyGet(CliHistory *history, uint16_t item) {
+    if (item == 0 || item > history->itemsCount)
+        return NULL;
+
+    // items are stored in the same way (separated by \0 and counted from 1),
+    // so can use this call
+    return embeddedCliGetToken(history->buf, item);
 }

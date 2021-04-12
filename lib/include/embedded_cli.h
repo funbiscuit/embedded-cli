@@ -116,6 +116,13 @@ struct EmbeddedCliConfig {
     uint16_t cmdBufferSize;
 
     /**
+     * Size of buffer that is used to store previously entered commands
+     * Only unique commands are stored in buffer. If buffer is smaller than
+     * entered command (including arguments), command is discarded from history
+     */
+    uint16_t historyBufferSize;
+
+    /**
      * Maximum amount of bindings that can be added via addBinding function.
      * Cli increases takes extra bindings for internal commands:
      * - help
@@ -143,6 +150,7 @@ struct EmbeddedCliConfig {
  * Default values:
  * -rxBufferSize  = 64
  * -cmdBufferSize  = 64
+ * -historyBufferSize  = 128
  * -cliBuffer     = NULL (use dynamic allocation)
  * -cliBufferSize = 0
  * -maxBindingCount = 8
