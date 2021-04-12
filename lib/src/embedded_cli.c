@@ -636,15 +636,15 @@ static void onHelp(EmbeddedCli *cli, char *tokens, void *context) {
 
     uint8_t tokenCount = embeddedCliGetTokenCount(tokens);
     if (tokenCount == 0) {
-        writeToOutput(cli, "Available commands:");
-        writeToOutput(cli, lineBreak);
         for (int i = 0; i < impl->bindingsCount; ++i) {
+            writeToOutput(cli, " * ");
             writeToOutput(cli, impl->bindings[i].name);
-            if (impl->bindings[i].help != NULL) {
-                writeToOutput(cli, ": ");
-                writeToOutput(cli, impl->bindings[i].help);
-            }
             writeToOutput(cli, lineBreak);
+            if (impl->bindings[i].help != NULL) {
+                cli->writeChar(cli, '\t');
+                writeToOutput(cli, impl->bindings[i].help);
+                writeToOutput(cli, lineBreak);
+            }
         }
     } else if (tokenCount == 1) {
         // try find command
@@ -659,14 +659,14 @@ static void onHelp(EmbeddedCli *cli, char *tokens, void *context) {
             }
         }
         if (found && helpStr != NULL) {
+            writeToOutput(cli, " * ");
             writeToOutput(cli, cmdName);
-            writeToOutput(cli, ": ");
+            writeToOutput(cli, lineBreak);
+            cli->writeChar(cli, '\t');
             writeToOutput(cli, helpStr);
             writeToOutput(cli, lineBreak);
         } else if (found) {
-            writeToOutput(cli, "No help is available for command \"");
-            writeToOutput(cli, cmdName);
-            cli->writeChar(cli, '\"');
+            writeToOutput(cli, "Help is not available");
             writeToOutput(cli, lineBreak);
         } else {
             onUnknownCommand(cli, cmdName);
