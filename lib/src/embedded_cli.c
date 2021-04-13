@@ -413,6 +413,9 @@ void embeddedCliReceiveChar(EmbeddedCli *cli, char c) {
 }
 
 void embeddedCliProcess(EmbeddedCli *cli) {
+    if (cli->writeChar == NULL)
+        return;
+
     PREPARE_IMPL(cli)
 
 
@@ -443,6 +446,7 @@ void embeddedCliProcess(EmbeddedCli *cli) {
     // discard unfinished command if overflow happened
     if (IS_FLAG_SET(impl->flags, CLI_FLAG_OVERFLOW)) {
         impl->cmdSize = 0;
+        impl->cmdBuffer[impl->cmdSize] = '\0';
         UNSET_FLAG(impl->flags, CLI_FLAG_OVERFLOW);
     }
 }
@@ -459,6 +463,9 @@ bool embeddedCliAddBinding(EmbeddedCli *cli, CliCommandBinding binding) {
 }
 
 void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
+    if (cli->writeChar == NULL)
+        return;
+
     PREPARE_IMPL(cli)
 
     // remove chars for autocompletion and live command
@@ -469,7 +476,6 @@ void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
     writeToOutput(cli, lineBreak);
 
     // print current command back to screen
-    impl->cmdBuffer[impl->cmdSize] = '\0';
     writeToOutput(cli, impl->invitation);
     writeToOutput(cli, impl->cmdBuffer);
     impl->inputLineLength = impl->cmdSize;
@@ -603,9 +609,9 @@ static void onCharInput(EmbeddedCli *cli, char c) {
 
     impl->cmdBuffer[impl->cmdSize] = c;
     ++impl->cmdSize;
+    impl->cmdBuffer[impl->cmdSize] = '\0';
 
-    if (cli->writeChar != NULL)
-        cli->writeChar(cli, c);
+    cli->writeChar(cli, c);
 }
 
 static void onControlInput(EmbeddedCli *cli, char c) {
@@ -622,6 +628,7 @@ static void onControlInput(EmbeddedCli *cli, char c) {
         if (impl->cmdSize > 0)
             parseCommand(cli);
         impl->cmdSize = 0;
+        impl->cmdBuffer[impl->cmdSize] = '\0';
         impl->inputLineLength = 0;
 
         writeToOutput(cli, impl->invitation);
@@ -632,6 +639,7 @@ static void onControlInput(EmbeddedCli *cli, char c) {
         cli->writeChar(cli, '\b');
         // and from buffer
         --impl->cmdSize;
+        impl->cmdBuffer[impl->cmdSize] = '\0';
     } else if (c == '\t') {
         onAutocompleteRequest(cli);
     }
@@ -666,7 +674,6 @@ static void parseCommand(EmbeddedCli *cli) {
 
     // we keep two last bytes in cmd buffer reserved so cmdSize is always by 2
     // less than cmdMaxSize
-    impl->cmdBuffer[impl->cmdSize] = '\0';
     impl->cmdBuffer[impl->cmdSize + 1] = '\0';
 
     if (cmdName == NULL)
@@ -827,7 +834,6 @@ static AutocompletedCommand getAutocompletedCommand(EmbeddedCli *cli, const char
 static void printLiveAutocompletion(EmbeddedCli *cli) {
     PREPARE_IMPL(cli)
 
-    impl->cmdBuffer[impl->cmdSize] = '\0';
     AutocompletedCommand cmd = getAutocompletedCommand(cli, impl->cmdBuffer);
 
     if (cmd.candidateCount == 0) {
@@ -852,7 +858,6 @@ static void printLiveAutocompletion(EmbeddedCli *cli) {
 static void onAutocompleteRequest(EmbeddedCli *cli) {
     PREPARE_IMPL(cli)
 
-    impl->cmdBuffer[impl->cmdSize] = '\0';
     AutocompletedCommand cmd = getAutocompletedCommand(cli, impl->cmdBuffer);
 
     if (cmd.candidateCount == 0)
@@ -868,6 +873,7 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
         cli->writeChar(cli, ' ');
         impl->cmdBuffer[cmd.autocompletedLen] = ' ';
         impl->cmdSize = cmd.autocompletedLen + 1;
+        impl->cmdBuffer[impl->cmdSize] = '\0';
         impl->inputLineLength = impl->cmdSize;
         return;
     }
@@ -891,7 +897,6 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
             writeToOutput(cli, lineBreak);
         }
 
-        impl->cmdBuffer[impl->cmdSize] = '\0';
         writeToOutput(cli, impl->invitation);
         writeToOutput(cli, impl->cmdBuffer);
     } else {
@@ -902,6 +907,7 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
             impl->cmdBuffer[i] = c;
         }
         impl->cmdSize = cmd.autocompletedLen;
+        impl->cmdBuffer[impl->cmdSize] = '\0';
     }
     impl->inputLineLength = impl->cmdSize;
 }
