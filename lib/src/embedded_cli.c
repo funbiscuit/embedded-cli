@@ -831,17 +831,10 @@ static void printLiveAutocompletion(EmbeddedCli *cli) {
     AutocompletedCommand cmd = getAutocompletedCommand(cli, impl->cmdBuffer);
 
     if (cmd.candidateCount == 0) {
-        if (impl->inputLineLength > impl->cmdSize) {
-            //TODO can replace with spaces and use \b instead
-            clearCurrentLine(cli);
-            writeToOutput(cli, impl->invitation);
-            writeToOutput(cli, impl->cmdBuffer);
-        }
-        impl->inputLineLength = impl->cmdSize;
-        return;
+        cmd.autocompletedLen = impl->cmdSize;
     }
 
-    // print live autocompletion
+    // print live autocompletion (or nothing, if it doesn't exist)
     for (int i = impl->cmdSize; i < cmd.autocompletedLen; ++i) {
         cli->writeChar(cli, cmd.firstCandidate[i]);
     }
@@ -854,7 +847,6 @@ static void printLiveAutocompletion(EmbeddedCli *cli) {
     // print current command again so cursor is moved to initial place
     writeToOutput(cli, impl->invitation);
     writeToOutput(cli, impl->cmdBuffer);
-
 }
 
 static void onAutocompleteRequest(EmbeddedCli *cli) {
