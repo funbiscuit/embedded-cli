@@ -863,52 +863,41 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
     if (cmd.candidateCount == 0)
         return;
 
-    if (cmd.candidateCount == 1) {
-        // complete command and insert space
-        for (int i = impl->cmdSize; i < cmd.autocompletedLen; ++i) {
-            char c = cmd.firstCandidate[i];
-            cli->writeChar(cli, c);
-            impl->cmdBuffer[i] = c;
+    if (cmd.candidateCount == 1 || cmd.autocompletedLen > impl->cmdSize) {
+        // can copy from index cmdSize, but prefix is the same, so copy everything
+        memcpy(impl->cmdBuffer, cmd.firstCandidate, cmd.autocompletedLen);
+        if (cmd.candidateCount == 1) {
+            impl->cmdBuffer[cmd.autocompletedLen] = ' ';
+            ++cmd.autocompletedLen;
         }
-        cli->writeChar(cli, ' ');
-        impl->cmdBuffer[cmd.autocompletedLen] = ' ';
-        impl->cmdSize = cmd.autocompletedLen + 1;
-        impl->cmdBuffer[impl->cmdSize] = '\0';
+        impl->cmdBuffer[cmd.autocompletedLen] = '\0';
+
+        writeToOutput(cli, &impl->cmdBuffer[impl->cmdSize]);
+        impl->cmdSize = cmd.autocompletedLen;
         impl->inputLineLength = impl->cmdSize;
         return;
     }
-    // cmd.candidateCount > 1
 
-    // with multiple candidates we either complete to common prefix
-    // or show all candidates if we already have common prefix
-    if (cmd.autocompletedLen == impl->cmdSize) {
-        // we need to completely clear current line since it begins with invitation
-        clearCurrentLine(cli);
+    // with multiple candidates when we already completed to common prefix
+    // we show all candidates and print input again
+    // we need to completely clear current line since it begins with invitation
+    clearCurrentLine(cli);
 
-        for (int i = 0; i < impl->bindingsCount; ++i) {
-            // autocomplete flag is set for all candidates by last call to
-            // getAutocompletedCommand
-            if (!(impl->bindingsFlags[i] & BINDING_FLAG_AUTOCOMPLETE))
-                continue;
+    for (int i = 0; i < impl->bindingsCount; ++i) {
+        // autocomplete flag is set for all candidates by last call to
+        // getAutocompletedCommand
+        if (!(impl->bindingsFlags[i] & BINDING_FLAG_AUTOCOMPLETE))
+            continue;
 
-            const char *name = impl->bindings[i].name;
+        const char *name = impl->bindings[i].name;
 
-            writeToOutput(cli, name);
-            writeToOutput(cli, lineBreak);
-        }
-
-        writeToOutput(cli, impl->invitation);
-        writeToOutput(cli, impl->cmdBuffer);
-    } else {
-        // complete to common prefix
-        for (int i = impl->cmdSize; i < cmd.autocompletedLen; ++i) {
-            char c = cmd.firstCandidate[i];
-            cli->writeChar(cli, c);
-            impl->cmdBuffer[i] = c;
-        }
-        impl->cmdSize = cmd.autocompletedLen;
-        impl->cmdBuffer[impl->cmdSize] = '\0';
+        writeToOutput(cli, name);
+        writeToOutput(cli, lineBreak);
     }
+
+    writeToOutput(cli, impl->invitation);
+    writeToOutput(cli, impl->cmdBuffer);
+
     impl->inputLineLength = impl->cmdSize;
 }
 
