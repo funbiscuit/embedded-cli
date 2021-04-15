@@ -17,6 +17,8 @@ private:
 
     void testBase();
 
+    void testHistory();
+
     void testAutocomplete();
 
     void testPrinting();

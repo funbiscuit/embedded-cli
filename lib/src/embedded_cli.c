@@ -75,6 +75,12 @@ struct CliHistory {
     uint16_t bufferSize;
 
     /**
+     * Index of currently selected element. This allows to navigate history
+     * After command is sent, current element is reset to 0 (no element)
+     */
+    uint16_t current;
+
+    /**
      * Number of items in buffer
      * Items are counted from top to bottom (and are 1 based).
      * So the most recent item is 1 and the oldest is itemCount.
@@ -171,6 +177,15 @@ static EmbeddedCliConfig defaultConfig;
 static const uint16_t cliInternalBindingCount = 1;
 
 static const char *lineBreak = "\r\n";
+
+/**
+ * Navigate through command history back and forth. If navigateUp is true,
+ * navigate to older commands, otherwise navigate to newer.
+ * When history end is reached, nothing happens.
+ * @param cli
+ * @param navigateUp
+ */
+static void navigateHistory(EmbeddedCli *cli, bool navigateUp);
 
 /**
  * Process escaped character. After receiving ESC+[ sequence, all chars up to
@@ -324,6 +339,14 @@ static bool historyPut(CliHistory *history, const char *str);
  */
 static const char *historyGet(CliHistory *history, uint16_t item);
 
+/**
+ * Remove specific item from history
+ * @param history
+ * @param str - string to remove
+ * @return
+ */
+static void historyRemove(CliHistory *history, const char *str);
+
 EmbeddedCliConfig *embeddedCliDefaultConfig(void) {
     defaultConfig.rxBufferSize = 64;
     defaultConfig.cmdBufferSize = 64;
@@ -382,6 +405,10 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
     buf = &buf[bindingCount * sizeof(CliCommandBinding)];
 
     impl->bindingsFlags = buf;
+    buf = &buf[bindingCount];
+
+    impl->history.buf = (char *) buf;
+    impl->history.bufferSize = config->historyBufferSize;
 
     if (allocated)
         SET_FLAG(impl->flags, CLI_FLAG_ALLOCATED);
@@ -591,12 +618,49 @@ uint8_t embeddedCliGetTokenCount(const char *tokenizedStr) {
     return tokenCount;
 }
 
+static void navigateHistory(EmbeddedCli *cli, bool navigateUp) {
+    PREPARE_IMPL(cli)
+    if (impl->history.itemsCount == 0 ||
+        (navigateUp && impl->history.current == impl->history.itemsCount) ||
+        (!navigateUp && impl->history.current == 0))
+        return;
+
+    clearCurrentLine(cli);
+
+    writeToOutput(cli, impl->invitation);
+
+    if (navigateUp)
+        ++impl->history.current;
+    else
+        --impl->history.current;
+
+    const char *item = historyGet(&impl->history, impl->history.current);
+    // simple way to handle empty command the same way as others
+    if (item == NULL)
+        item = "";
+    size_t len = strlen(item);
+    memcpy(impl->cmdBuffer, item, len);
+    impl->cmdBuffer[len] = '\0';
+    impl->cmdSize = len;
+
+    writeToOutput(cli, impl->cmdBuffer);
+    impl->inputLineLength = impl->cmdSize;
+
+    printLiveAutocompletion(cli);
+}
+
 static void onEscapedInput(EmbeddedCli *cli, char c) {
     PREPARE_IMPL(cli)
 
     if (c >= 64 && c <= 126) {
         // handle escape sequence
         UNSET_FLAG(impl->flags, CLI_FLAG_ESCAPE_MODE);
+
+        if (c == 'A' || c == 'B') {
+            // treat \e[..A as cursor up and \e[..B as cursor down
+            // there might be extra chars between [ and A/B, just ignore them
+            navigateHistory(cli, c == 'A');
+        }
     }
 }
 
@@ -630,6 +694,7 @@ static void onControlInput(EmbeddedCli *cli, char c) {
         impl->cmdSize = 0;
         impl->cmdBuffer[impl->cmdSize] = '\0';
         impl->inputLineLength = 0;
+        impl->history.current = 0;
 
         writeToOutput(cli, impl->invitation);
     } else if ((c == '\b' || c == 0x7F) && impl->cmdSize > 0) {
@@ -648,6 +713,20 @@ static void onControlInput(EmbeddedCli *cli, char c) {
 
 static void parseCommand(EmbeddedCli *cli) {
     PREPARE_IMPL(cli)
+
+    bool isEmpty = true;
+
+    for (int i = 0; i < impl->cmdSize; ++i) {
+        if (impl->cmdBuffer[i] != ' ') {
+            isEmpty = false;
+            break;
+        }
+    }
+    // do not process empty commands
+    if (isEmpty)
+        return;
+    // push command to history before buffer is modified
+    historyPut(&impl->history, impl->cmdBuffer);
 
     char *cmdName = NULL;
     char *cmdArgs = NULL;
@@ -961,9 +1040,12 @@ static bool historyPut(CliHistory *history, const char *str) {
     if (history->bufferSize < len + 1)
         return false;
 
+    // remove str from history (if it's present) so we don't get duplicates
+    historyRemove(history, str);
+
     size_t usedSize;
     // remove old items if new one can't fit into buffer
-    while (true) {
+    while (history->itemsCount > 0) {
         const char *item = historyGet(history, history->itemsCount);
         size_t itemLen = strlen(item);
         usedSize = (item - history->buf) + itemLen + 1;
@@ -981,6 +1063,7 @@ static bool historyPut(CliHistory *history, const char *str) {
         memmove(&history->buf[len + 1], history->buf, usedSize);
     }
     memcpy(history->buf, str, len + 1);
+    ++history->itemsCount;
 
     return true;
 }
@@ -992,4 +1075,31 @@ static const char *historyGet(CliHistory *history, uint16_t item) {
     // items are stored in the same way (separated by \0 and counted from 1),
     // so can use this call
     return embeddedCliGetToken(history->buf, item);
+}
+
+static void historyRemove(CliHistory *history, const char *str) {
+    if (str == NULL || history->itemsCount == 0)
+        return;
+    const char *item = NULL;
+    int i;
+    for (i = 1; i <= history->itemsCount; ++i) {
+        item = historyGet(history, i);
+        if (strcmp(item, str) == 0) {
+            break;
+        }
+        item = NULL;
+    }
+    if (item == NULL)
+        return;
+
+    --history->itemsCount;
+    if (i == (history->itemsCount + 1)) {
+        // if this is a last element, nothing is remaining to move
+        return;
+    }
+
+    size_t len = strlen(item);
+    size_t remaining = history->bufferSize - (item + len + 1 - history->buf);
+    // move everything to the right of found item
+    memmove((char *) item, &item[len + 1], remaining);
 }

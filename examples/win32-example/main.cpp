@@ -103,6 +103,21 @@ int main() {
             KEY_EVENT_RECORD event = record.Event.KeyEvent;
             if (!event.bKeyDown)
                 continue;
+
+            auto key = event.wVirtualKeyCode;
+
+            // key up and down
+            if (key == 38 || key == 40) {
+                // send as escape sequence
+                embeddedCliReceiveChar(cli, '\x1B');
+                embeddedCliReceiveChar(cli, '[');
+
+                if (key == 38)
+                    embeddedCliReceiveChar(cli, 'A');
+                else
+                    embeddedCliReceiveChar(cli, 'B');
+            }
+
             char aChar = event.uChar.AsciiChar;
 
             // escape code

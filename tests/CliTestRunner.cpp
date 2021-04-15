@@ -18,6 +18,9 @@ void CliTestRunner::runTests() {
         testPrinting();
     }
 
+    SECTION("History") {
+        testHistory();
+    }
 
     SECTION("Help command handling") {
         testHelp();
@@ -167,6 +170,91 @@ void CliTestRunner::testBase() {
             REQUIRE(cmds.back().name == "get");
             REQUIRE(cmds.back().args == "led");
         }
+    }
+}
+
+void CliTestRunner::testHistory() {
+    auto cmdUp = "\x1B[A";
+    auto cmdDown = "\x1B[B";
+
+    SECTION("When history is present, can navigate") {
+        std::vector<std::string> cmds = {"command", "get", "reset", "exit"};
+        for (auto &cmd : cmds) {
+            mock.sendLine(cmd);
+        }
+        embeddedCliProcess(cli);
+
+        for (int i = 0; i < cmds.size(); ++i) {
+            mock.sendStr(cmdUp);
+            embeddedCliProcess(cli);
+            REQUIRE(mock.getLines().back() == ("> " + cmds[cmds.size() - i - 1]));
+        }
+
+        for (int i = 1; i < cmds.size(); ++i) {
+            mock.sendStr(cmdDown);
+            embeddedCliProcess(cli);
+            REQUIRE(mock.getLines().back() == ("> " + cmds[i]));
+        }
+
+        mock.sendStr(cmdDown);
+        embeddedCliProcess(cli);
+        REQUIRE(mock.getLines().back() == ">");
+    }
+
+    SECTION("Sending command multiple times, doesn't create duplicates") {
+        std::vector<std::string> cmds = {"command", "get", "command", "command"};
+        for (auto &cmd : cmds) {
+            mock.sendLine(cmd);
+        }
+        embeddedCliProcess(cli);
+
+        mock.sendStr(cmdUp);
+        embeddedCliProcess(cli);
+        REQUIRE(mock.getLines().back() == "> command");
+
+        mock.sendStr(cmdUp);
+        embeddedCliProcess(cli);
+        REQUIRE(mock.getLines().back() == "> get");
+
+        mock.sendStr(cmdUp);
+        embeddedCliProcess(cli);
+        REQUIRE(mock.getLines().back() == "> get");
+
+        mock.sendStr(cmdDown);
+        embeddedCliProcess(cli);
+        REQUIRE(mock.getLines().back() == "> command");
+
+        mock.sendStr(cmdDown);
+        embeddedCliProcess(cli);
+        REQUIRE(mock.getLines().back() == ">");
+    }
+
+    SECTION("Sending command resets history cursor") {
+        std::vector<std::string> cmds = {"command", "get"};
+        for (auto &cmd : cmds) {
+            mock.sendLine(cmd);
+        }
+        embeddedCliProcess(cli);
+
+        mock.sendStr(cmdUp);
+        mock.sendStr(cmdUp);
+        mock.sendLine("");
+        mock.sendStr(cmdUp);
+
+        embeddedCliProcess(cli);
+        REQUIRE(mock.getLines().back() == "> command");
+
+        mock.sendStr(cmdUp);
+        embeddedCliProcess(cli);
+        REQUIRE(mock.getLines().back() == "> get");
+    }
+
+    SECTION("Arguments are preserved in history") {
+        mock.sendLine("get param 2");
+        mock.sendStr(cmdUp);
+
+        embeddedCliProcess(cli);
+        REQUIRE(mock.getLines().back() == "> get param 2");
     }
 }
 
