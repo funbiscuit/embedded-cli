@@ -4,24 +4,26 @@
  *
  * With specified settings:
  * 32 bytes for cmd buffer, 16 for RX buffer,
+ * 32 bytes for history,
  * 3 binding functions and no dynamic allocation
- * library uses 4218 bytes of ROM and 479 bytes of RAM.
- * Total size of firmware is 6768 bytes, 671 bytes of RAM are used.
+ * Total size of firmware is 7538 bytes, 654 bytes of RAM are used.
+ * Not everything is used by library, some memory is used by Serial, for
+ * example.
  * Most of RAM space is taken up by char arrays so size can be reduced if
  * messages are discarded.
  * For example, by removing code inside onHelp and onUnknown functions inside
  * library (and replacing help strings in bindings by nullptr's) size of FW is
- * reduced by 690 bytes of ROM and 250 bytes of RAM.
- * So library itself will use no more than 3528 bytes of ROM and 229 of RAM.
- *
+ * reduced by 688 bytes of ROM and 190 bytes of RAM. Total usage is than
+ * 6850 of ROM and 464 of RAM.
  */
 
 #include "embedded_cli.h"
 
-// 126 bytes is minimum size for this params on Arduino Nano
-#define CLI_BUFFER_SIZE 126
+// 164 bytes is minimum size for this params on Arduino Nano
+#define CLI_BUFFER_SIZE 164
 #define CLI_RX_BUFFER_SIZE 16
 #define CLI_CMD_BUFFER_SIZE 32
+#define CLI_HISTORY_SIZE 32
 #define CLI_BINDING_COUNT 3
 
 EmbeddedCli *cli;
@@ -39,13 +41,14 @@ void onLed(EmbeddedCli *cli, char *args, void *context);
 void onAdc(EmbeddedCli *cli, char *args, void *context);
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(115200);
 
     EmbeddedCliConfig *config = embeddedCliDefaultConfig();
     config->cliBuffer = cliBuffer;
     config->cliBufferSize = CLI_BUFFER_SIZE;
     config->rxBufferSize = CLI_RX_BUFFER_SIZE;
     config->cmdBufferSize = CLI_CMD_BUFFER_SIZE;
+    config->historyBufferSize = CLI_HISTORY_SIZE;
     config->maxBindingCount = CLI_BINDING_COUNT;
     cli = embeddedCliNew(config);
 
