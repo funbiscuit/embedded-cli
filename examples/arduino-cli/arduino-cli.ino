@@ -100,11 +100,11 @@ void onCommand(EmbeddedCli *embeddedCli, CliCommand *command) {
     Serial.println(F("Received command:"));
     Serial.println(command->name);
     embeddedCliTokenizeArgs(command->args);
-    for (int i = 0; i < embeddedCliGetTokenCount(command->args); ++i) {
+    for (int i = 1; i <= embeddedCliGetTokenCount(command->args); ++i) {
         Serial.print(F("arg "));
         Serial.print((char) ('0' + i));
         Serial.print(F(": "));
-        Serial.println(embeddedCliGetToken(command->args, i + 1));
+        Serial.println(embeddedCliGetToken(command->args, i));
     }
 }
 
