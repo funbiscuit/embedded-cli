@@ -469,6 +469,16 @@ void CliTestRunner::testAutocomplete() {
         REQUIRE(lines[0] == "> m");
         REQUIRE(cursor == 3);
     }
+
+    SECTION("Submit command with live autocompletion submits full command") {
+        mock.sendLine("s");
+
+        embeddedCliProcess(cli);
+
+        REQUIRE(mock.getReceivedCommands().empty());
+        REQUIRE(!mock.getReceivedKnownCommands().empty());
+        REQUIRE(mock.getReceivedKnownCommands().back().name == "set");
+    }
 }
 
 void CliTestRunner::testPrinting() {

@@ -687,6 +687,9 @@ static void onControlInput(EmbeddedCli *cli, char c) {
         return;
 
     if (c == '\r' || c == '\n') {
+        // try to autocomplete command and then process it
+        onAutocompleteRequest(cli);
+
         writeToOutput(cli, lineBreak);
 
         if (impl->cmdSize > 0)
