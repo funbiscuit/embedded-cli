@@ -8,7 +8,7 @@ Simple CLI library intended for use in embedded systems (like STM32 or Arduino).
 * Dynamic or static allocation
 * Configurable memory usage
 * Command-to-function binding with arguments support
-* Live autocompletion (see demo below)
+* Live autocompletion (see demo above)
 * Tab (jump to end of current autocompletion) and backspace (remove char) support
 * History support (navigate with up and down keypress)
 * Any byte-stream interface is supported (for example, UART)
@@ -38,7 +38,7 @@ EmbeddedCli *cli = embeddedCliNew(config);
 ```
 If default arguments are good enough for you, you can create cli with default config:
 ```c
-EmbeddedCli *cli = embeddedCliNewDefault(config);
+EmbeddedCli *cli = embeddedCliNewDefault();
 ```
 Provide a function that will be used to send chars to the other end:
 ```c
@@ -95,11 +95,15 @@ At runtime you need to provide all received chars to cli:
 // char c = Serial.read();
 embeddedCliReceiveChar(cli, c);
 ```
-This function can be called from normal code or from ISRs. This call puts char into internal buffer,
-but no processing is done yet. To do all the "hard" work, call process function periodically
+This function can be called from normal code or from ISRs (but don't call it from multiple places). This call puts char into internal buffer,
+but no processing is done yet.
+
+To do all the "hard" work, call process function periodically
 ```c
 embeddedCliProcess(cli);
 ```
+Processing should be called from one place only and it shouldn't be inside ISRs. Otherwise you internal
+state might get corrupted.
 
 ### Static allocation
 CLI can be used with statically allocated buffer for its internal structures. Required size of buffer depends on
