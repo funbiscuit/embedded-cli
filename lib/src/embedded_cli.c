@@ -42,6 +42,12 @@
  */
 #define CLI_FLAG_ESCAPE_MODE 0x08u
 
+/**
+ * Indicates that CLI in mode when it will print directly to output without
+ * clear of current command and printing it back
+ */
+#define CLI_FLAG_DIRECT_PRINT 0x10u
+
 typedef struct EmbeddedCliImpl EmbeddedCliImpl;
 typedef struct AutocompletedCommand AutocompletedCommand;
 typedef struct FifoBuf FifoBuf;
@@ -496,18 +502,21 @@ void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
     PREPARE_IMPL(cli)
 
     // remove chars for autocompletion and live command
-    clearCurrentLine(cli);
+    if (!IS_FLAG_SET(impl->flags, CLI_FLAG_DIRECT_PRINT))
+        clearCurrentLine(cli);
 
     // print provided string
     writeToOutput(cli, string);
     writeToOutput(cli, lineBreak);
 
     // print current command back to screen
-    writeToOutput(cli, impl->invitation);
-    writeToOutput(cli, impl->cmdBuffer);
-    impl->inputLineLength = impl->cmdSize;
+    if (!IS_FLAG_SET(impl->flags, CLI_FLAG_DIRECT_PRINT)) {
+        writeToOutput(cli, impl->invitation);
+        writeToOutput(cli, impl->cmdBuffer);
+        impl->inputLineLength = impl->cmdSize;
 
-    printLiveAutocompletion(cli);
+        printLiveAutocompletion(cli);
+    }
 }
 
 void embeddedCliFree(EmbeddedCli *cli) {
@@ -769,7 +778,10 @@ static void parseCommand(EmbeddedCli *cli) {
 
             if (impl->bindings[i].tokenizeArgs)
                 embeddedCliTokenizeArgs(cmdArgs);
+            // currently, output is blank line, so we can just print directly
+            SET_FLAG(impl->flags, CLI_FLAG_DIRECT_PRINT);
             impl->bindings[i].binding(cli, cmdArgs, impl->bindings[i].context);
+            UNSET_FLAG(impl->flags, CLI_FLAG_DIRECT_PRINT);
             return;
         }
     }
@@ -781,7 +793,10 @@ static void parseCommand(EmbeddedCli *cli) {
         command.name = cmdName;
         command.args = cmdArgs;
 
+        // currently, output is blank line, so we can just print directly
+        SET_FLAG(impl->flags, CLI_FLAG_DIRECT_PRINT);
         cli->onCommand(cli, &command);
+        UNSET_FLAG(impl->flags, CLI_FLAG_DIRECT_PRINT);
     } else {
         onUnknownCommand(cli, cmdName);
     }
