@@ -3,7 +3,7 @@ name: CMake
 on: [ push ]
 
 env:
-  BUILD_TYPE: Release
+  BUILD_TYPE: Debug
 
 jobs:
   build:
@@ -20,7 +20,7 @@ jobs:
         # access regardless of the host operating system
         shell: bash
         working-directory: ${{github.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_TESTS=true -DTESTS_COV=ON
 
       - name: Build
         working-directory: ${{github.workspace}}/build
@@ -34,9 +34,19 @@ jobs:
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
         run: ctest -C $BUILD_TYPE
 
+      - name: Coverage
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: cmake --build . --target coverage_xml
+
       - name: Upload test logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v2
         with:
           name: testing
           path: ${{github.workspace}}/build/Testing
+
+      - name: Upload coverage to codecov
+        uses: codecov/codecov-action@v2
+        with:
+          files: ${{ github.workspace }}/build/coverage_xml.xml
