@@ -3,10 +3,9 @@
 #include <catch.hpp>
 
 static void setVectorString(std::vector<char> &buffer, const std::string &str) {
-    buffer.reserve(str.size() + 2);
+    buffer.resize(str.size() + 2, '\0');
     std::copy(str.begin(), str.end(), buffer.begin());
     buffer[str.size()] = '\0';
-    buffer[str.size() + 1] = '\0';
 }
 
 TEST_CASE("EmbeddedCli. Tokens", "[cli][token]") {
@@ -91,6 +90,44 @@ TEST_CASE("EmbeddedCli. Tokens", "[cli][token]") {
 
         REQUIRE(std::string(tok1) == "abcd");
         REQUIRE(std::string(tok2) == "efg");
+    }
+
+
+    SECTION("Get tokens with quoted args") {
+        setVectorString(buffer, R"("abcd efg" te\\st "test\"2 3" "test4 5 6")");
+        embeddedCliTokenizeArgs(buffer.data());
+
+        const char *tok1 = embeddedCliGetToken(buffer.data(), 1);
+        const char *tok2 = embeddedCliGetToken(buffer.data(), 2);
+        const char *tok3 = embeddedCliGetToken(buffer.data(), 3);
+        const char *tok4 = embeddedCliGetToken(buffer.data(), 4);
+
+        REQUIRE(tok1 != nullptr);
+        REQUIRE(tok2 != nullptr);
+        REQUIRE(tok3 != nullptr);
+        REQUIRE(tok4 != nullptr);
+
+        REQUIRE(std::string(tok1) == "abcd efg");
+        REQUIRE(std::string(tok2) == "te\\st");
+        REQUIRE(std::string(tok3) == "test\"2 3");
+        REQUIRE(std::string(tok4) == "test4 5 6");
+    }
+
+    SECTION("Quoted args without spaces") {
+        setVectorString(buffer, R"("abcd efg"test"test\"2 3")");
+        embeddedCliTokenizeArgs(buffer.data());
+
+        const char *tok1 = embeddedCliGetToken(buffer.data(), 1);
+        const char *tok2 = embeddedCliGetToken(buffer.data(), 2);
+        const char *tok3 = embeddedCliGetToken(buffer.data(), 3);
+
+        REQUIRE(tok1 != nullptr);
+        REQUIRE(tok2 != nullptr);
+        REQUIRE(tok3 != nullptr);
+
+        REQUIRE(std::string(tok1) == "abcd efg");
+        REQUIRE(std::string(tok2) == "test");
+        REQUIRE(std::string(tok3) == "test\"2 3");
     }
 
     SECTION("Get tokens from empty string") {

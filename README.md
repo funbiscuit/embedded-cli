@@ -25,7 +25,7 @@ The package includes cli.h, and cli.c.
 #include "embedded_cli.h"
 ```
 
-### Initialisation
+### Initialization
 To create CLI, you'll need to provide a desired config. Best way is to get default config and change desired values.
 For example, change maximum amount of command bindings:
 ```c
@@ -77,8 +77,11 @@ you can convert it to list of tokens with single call:
 ```c
 embeddedCliTokenizeArgs(args);
 ```
-**Note**: Initial array will be modified (so it must be non const), do not use it after this call directly.
-After that you can count arguments or get single argument as a null-terminated string:
+
+**Note**: This function will need to make args string double null-terminated Initial array will be modified (so it must
+be non const), do not use it after this call directly. After that you can count arguments or get single argument as a
+null-terminated string:
+
 ```c
 const char * arg = embeddedCliGetToken(args, pos); // args are counted from 1 (not from 0)
 
@@ -87,16 +90,28 @@ uint8_t pos = embeddedCliFindToken(args, argument);
 uint8_t count = embeddedCliGetTokenCount(const char *tokenizedStr);
 ```
 
-Look into examples to find out more.
+Examples of tokenization:
+
+| Input             | Arg 1      | Arg 2  | Comments                                         |
+|-------------------|------------|--------|--------------------------------------------------|
+| abc def           | abc        | def    | Space is treated as arg separator                |
+| "abc def"         | abc def    |        | To use space inside arg surround arg with quotes |
+| "abc\\" d\\\\ef"  | abc" d\\ef |        | To use quotes or slahes escape them              | 
+| "abc def" test    | abc def    | test   | You can mix quoted args and non quoted           |
+| "abc def"test     | abc def    | test   | Space between quoted args is optional            |
+| "abc def""test 2" | abc def    | test 2 | Space between quoted args is optional            |
 
 ### Runtime
+
 At runtime you need to provide all received chars to cli:
+
 ```c
 // char c = Serial.read();
 embeddedCliReceiveChar(cli, c);
 ```
-This function can be called from normal code or from ISRs (but don't call it from multiple places). This call puts char into internal buffer,
-but no processing is done yet.
+
+This function can be called from normal code or from ISRs (but don't call it from multiple places). This call puts char
+into internal buffer, but no processing is done yet.
 
 To do all the "hard" work, call process function periodically
 ```c

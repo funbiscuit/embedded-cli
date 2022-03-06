@@ -533,43 +533,40 @@ void embeddedCliTokenizeArgs(char *args) {
 
     // for now only space, but can add more later
     const char *separators = " ";
-    size_t len = strlen(args);
-    // place extra null char to indicate end of tokens
-    args[len + 1] = '\0';
 
-    if (len == 0)
-        return;
+    // indicates that arg is quoted so separators are copied as is
+    bool quotesEnabled = false;
+    // indicates that previous char was a slash, so next char is copied as is
+    bool escapeActivated = false;
+    int insertPos = 0;
 
-    // replace all separators with \0 char
-    for (int i = 0; i < len; ++i) {
-        if (strchr(separators, args[i]) != NULL) {
-            args[i] = '\0';
+    int i = 0;
+    char currentChar;
+    while ((currentChar = args[i]) != '\0') {
+        ++i;
+
+        if (escapeActivated) {
+            escapeActivated = false;
+        } else if (currentChar == '\\') {
+            escapeActivated = true;
+            continue;
+        } else if (currentChar == '"') {
+            quotesEnabled = !quotesEnabled;
+            currentChar = '\0';
+        } else if (!quotesEnabled && strchr(separators, currentChar) != NULL) {
+            currentChar = '\0';
+        }
+
+        // null chars are only copied once and not copied to the beginning
+        if (currentChar != '\0' || (insertPos > 0 && args[insertPos - 1] != '\0')) {
+            args[insertPos] = currentChar;
+            ++insertPos;
         }
     }
 
-    // compress all sequential null-chars to single ones, starting from end
-
-    size_t nextTokenStartIndex = 0;
-    size_t i = len;
-    while (i > 0) {
-        --i;
-        bool isSeparator = strchr(separators, args[i]) != NULL;
-
-        if (!isSeparator && args[i + 1] == '\0') {
-            // found end of token, move tokens on the right side of this one
-            if (nextTokenStartIndex != 0 && nextTokenStartIndex - i > 2) {
-                // will copy all tokens to the right and two null-chars
-                memmove(&args[i + 2], &args[nextTokenStartIndex], len - nextTokenStartIndex + 1);
-            }
-        } else if (isSeparator && args[i + 1] != '\0') {
-            nextTokenStartIndex = i + 1;
-        }
-    }
-
-    // remove null chars from the beginning
-    if (args[0] == '\0' && nextTokenStartIndex > 0) {
-        memmove(args, &args[nextTokenStartIndex], len - nextTokenStartIndex + 1);
-    }
+    // make args double null-terminated source buffer must be big enough to contain extra spaces
+    args[insertPos] = '\0';
+    args[insertPos + 1] = '\0';
 }
 
 const char *embeddedCliGetToken(const char *tokenizedStr, uint8_t pos) {

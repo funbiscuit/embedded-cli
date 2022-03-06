@@ -65,7 +65,7 @@ int main() {
     embeddedCliAddBinding(cli, {
             "hello",
             "Print hello message",
-            false,
+            true,
             (void *) "World",
             onHello
     });
