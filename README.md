@@ -1,10 +1,13 @@
 # Embedded CLI
 
+[![codecov](https://codecov.io/gh/funbiscuit/embedded-cli/branch/master/graph/badge.svg?token=0tbOeXh0kh)](https://codecov.io/gh/funbiscuit/embedded-cli)
+
 Simple CLI library intended for use in embedded systems (like STM32 or Arduino).
 
 ![Arduino Demo](examples/arduino-demo.gif)
 
 ## Features
+
 * Dynamic or static allocation
 * Configurable memory usage
 * Command-to-function binding with arguments support
