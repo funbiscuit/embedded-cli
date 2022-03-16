@@ -24,22 +24,22 @@ TEST_CASE("EmbeddedCli. Static allocation", "[cli]") {
     SECTION("Test creation") {
         INFO("Can't create CLI with small buffer")
         for (size_t size = 1; size < minSize; ++size) {
-            std::vector<uint8_t> data(size);
-            config->cliBuffer = data.data();
+            std::vector<uint32_t> data(size/4+1);
+            config->cliBuffer32 = data.data();
             config->cliBufferSize = size;
             REQUIRE(embeddedCliNew(config) == nullptr);
         }
         INFO("Can create CLI with buffer of minimal size")
-        std::vector<uint8_t> data(minSize);
-        config->cliBuffer = data.data();
+        std::vector<uint32_t> data(minSize/4);
+        config->cliBuffer32 = data.data();
         config->cliBufferSize = minSize;
         EmbeddedCli *cli = embeddedCliNew(config);
 
         REQUIRE(cli != nullptr);
     }
 
-    std::vector<uint8_t> data(minSize);
-    config->cliBuffer = data.data();
+    std::vector<uint32_t> data(minSize/4);
+    config->cliBuffer32 = data.data();
     config->cliBufferSize = minSize;
     EmbeddedCli *cli = embeddedCliNew(config);
 
