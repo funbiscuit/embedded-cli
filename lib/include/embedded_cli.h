@@ -134,7 +134,7 @@ struct EmbeddedCliConfig {
      * be allocated dynamically. Otherwise this buffer is used and no
      * allocations are made
      */
-    uint8_t *cliBuffer;
+    uint32_t *cliBuffer32;
 
     /**
      * Size of buffer for cli and internal structures.

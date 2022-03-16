@@ -357,20 +357,39 @@ EmbeddedCliConfig *embeddedCliDefaultConfig(void) {
     defaultConfig.rxBufferSize = 64;
     defaultConfig.cmdBufferSize = 64;
     defaultConfig.historyBufferSize = 128;
-    defaultConfig.cliBuffer = NULL;
+    defaultConfig.cliBuffer32 = NULL;
     defaultConfig.cliBufferSize = 0;
     defaultConfig.maxBindingCount = 8;
     return &defaultConfig;
 }
 
+#define STATIC_ALIGNMENT (4)
+// Return the number of 32-bit words that are required to store a struct
+// of size num_bytes, while still maintaining alignment.
+static size_t AlignN32Words(size_t num_bytes) {
+    size_t mod = num_bytes % STATIC_ALIGNMENT;
+    num_bytes += (STATIC_ALIGNMENT - mod); 
+    // i.e. 1 bytes = 1 + (4-1) = 1 + 3 = 4
+    // i.e. 2 bytes = 2 + (4-2) = 2 + 2 = 4, etc... always hits a multiple of 4 bytes.
+    size_t num_words = num_bytes / STATIC_ALIGNMENT;
+    return num_words;
+}
+
+static size_t AlignN32Bytes(size_t num_bytes) {
+    size_t num_words = AlignN32Words(num_bytes);
+    return num_words * STATIC_ALIGNMENT;
+}
+
 uint16_t embeddedCliRequiredSize(EmbeddedCliConfig *config) {
     uint16_t bindingCount = config->maxBindingCount + cliInternalBindingCount;
-    return sizeof(EmbeddedCli) + sizeof(EmbeddedCliImpl) +
-           config->rxBufferSize * sizeof(char) +
-           config->cmdBufferSize * sizeof(char) +
-           config->historyBufferSize * sizeof(char) +
-           bindingCount * sizeof(CliCommandBinding) +
-           bindingCount * sizeof(uint8_t);
+    return
+        AlignN32Bytes(sizeof(EmbeddedCli)) +
+        AlignN32Bytes(sizeof(EmbeddedCliImpl)) +
+        AlignN32Bytes(config->rxBufferSize * sizeof(char)) +
+        AlignN32Bytes(config->cmdBufferSize * sizeof(char)) +
+        AlignN32Bytes(config->historyBufferSize * sizeof(char)) +
+        bindingCount * AlignN32Bytes(sizeof(CliCommandBinding)) +
+        AlignN32Bytes(bindingCount * sizeof(uint8_t));
 }
 
 EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
@@ -381,37 +400,37 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
     size_t totalSize = embeddedCliRequiredSize(config);
 
     bool allocated = false;
-    if (config->cliBuffer == NULL) {
-        config->cliBuffer = malloc(totalSize);
-        if (config->cliBuffer == NULL)
+    if (config->cliBuffer32 == NULL) {
+        config->cliBuffer32 = malloc(totalSize); // malloc guarantees alignment.
+        if (config->cliBuffer32 == NULL)
             return NULL;
         allocated = true;
     } else if (config->cliBufferSize < totalSize) {
         return NULL;
     }
 
-    uint8_t *buf = config->cliBuffer;
+    uint32_t *buf = config->cliBuffer32;
 
     memset(buf, 0, totalSize);
 
     cli = (EmbeddedCli *) buf;
-    buf = &buf[sizeof(EmbeddedCli)];
+    buf += AlignN32Words(sizeof(EmbeddedCli));
 
     cli->_impl = (EmbeddedCliImpl *) buf;
-    buf = &buf[sizeof(EmbeddedCliImpl)];
+    buf += AlignN32Words(sizeof(EmbeddedCliImpl));
 
-    PREPARE_IMPL(cli)
+    PREPARE_IMPL(cli);
     impl->rxBuffer.buf = (char *) buf;
-    buf = &buf[config->rxBufferSize * sizeof(char)];
+    buf += AlignN32Words(config->rxBufferSize * sizeof(char));
 
     impl->cmdBuffer = (char *) buf;
-    buf = &buf[config->cmdBufferSize * sizeof(char)];
+    buf += AlignN32Words(config->cmdBufferSize * sizeof(char));
 
     impl->bindings = (CliCommandBinding *) buf;
-    buf = &buf[bindingCount * sizeof(CliCommandBinding)];
+    buf += bindingCount * AlignN32Words(sizeof(CliCommandBinding));
 
-    impl->bindingsFlags = buf;
-    buf = &buf[bindingCount];
+    impl->bindingsFlags = (uint8_t *)buf;
+    buf += AlignN32Words(bindingCount);
 
     impl->history.buf = (char *) buf;
     impl->history.bufferSize = config->historyBufferSize;
@@ -567,6 +586,30 @@ void embeddedCliTokenizeArgs(char *args) {
     // make args double null-terminated source buffer must be big enough to contain extra spaces
     args[insertPos] = '\0';
     args[insertPos + 1] = '\0';
+}
+
+static char *embeddedCliGetTokenVariable(char *tokenizedStr, uint8_t pos) {
+    if (tokenizedStr == NULL || pos == 0)
+        return NULL;
+    int i = 0;
+    int tokenCount = 1;
+    while (true) {
+        if (tokenCount == pos)
+            break;
+
+        if (tokenizedStr[i] == '\0') {
+            ++tokenCount;
+            if (tokenizedStr[i + 1] == '\0')
+                break;
+        }
+
+        ++i;
+    }
+
+    if (tokenizedStr[i] != '\0')
+        return &tokenizedStr[i];
+    else
+        return NULL;
 }
 
 const char *embeddedCliGetToken(const char *tokenizedStr, uint8_t pos) {
@@ -800,8 +843,8 @@ static void parseCommand(EmbeddedCli *cli) {
 }
 
 static void initInternalBindings(EmbeddedCli *cli) {
-    PREPARE_IMPL(cli)
-
+    PREPARE_IMPL(cli);
+    impl = impl; // gcc unused warning
     CliCommandBinding b = {
             "help",
             "Print list of commands",
@@ -893,7 +936,7 @@ static AutocompletedCommand getAutocompletedCommand(EmbeddedCli *cli, const char
 
         // check if this command is candidate for autocomplete
         bool isCandidate = true;
-        for (int j = 0; j < prefixLen; ++j) {
+        for (unsigned int j = 0; j < prefixLen; ++j) {
             if (prefix[j] != name[j]) {
                 isCandidate = false;
                 break;
@@ -914,7 +957,7 @@ static AutocompletedCommand getAutocompletedCommand(EmbeddedCli *cli, const char
             continue;
         }
 
-        for (int j = impl->cmdSize; j < cmd.autocompletedLen; ++j) {
+        for (unsigned int j = impl->cmdSize; j < cmd.autocompletedLen; ++j) {
             if (cmd.firstCandidate[j] != name[j]) {
                 cmd.autocompletedLen = j;
                 break;
@@ -935,11 +978,11 @@ static void printLiveAutocompletion(EmbeddedCli *cli) {
     }
 
     // print live autocompletion (or nothing, if it doesn't exist)
-    for (int i = impl->cmdSize; i < cmd.autocompletedLen; ++i) {
+    for (unsigned int i = impl->cmdSize; i < cmd.autocompletedLen; ++i) {
         cli->writeChar(cli, cmd.firstCandidate[i]);
     }
     // replace with spaces previous autocompletion
-    for (int i = cmd.autocompletedLen; i < impl->inputLineLength; ++i) {
+    for (unsigned int i = cmd.autocompletedLen; i < impl->inputLineLength; ++i) {
         cli->writeChar(cli, ' ');
     }
     impl->inputLineLength = cmd.autocompletedLen;
@@ -1000,7 +1043,7 @@ static void clearCurrentLine(EmbeddedCli *cli) {
     size_t len = impl->inputLineLength + strlen(impl->invitation);
 
     cli->writeChar(cli, '\r');
-    for (int i = 0; i < len; ++i) {
+    for (unsigned int i = 0; i < len; ++i) {
         cli->writeChar(cli, ' ');
     }
     cli->writeChar(cli, '\r');
@@ -1010,7 +1053,7 @@ static void clearCurrentLine(EmbeddedCli *cli) {
 static void writeToOutput(EmbeddedCli *cli, const char *str) {
     size_t len = strlen(str);
 
-    for (int i = 0; i < len; ++i) {
+    for (unsigned int i = 0; i < len; ++i) {
         cli->writeChar(cli, str[i]);
     }
 }
@@ -1092,13 +1135,22 @@ static const char *historyGet(CliHistory *history, uint16_t item) {
     return embeddedCliGetToken(history->buf, item);
 }
 
+static char *historyGetVariable(CliHistory *history, uint16_t item) {
+    if (item == 0 || item > history->itemsCount)
+        return NULL;
+
+    // items are stored in the same way (separated by \0 and counted from 1),
+    // so can use this call
+    return embeddedCliGetTokenVariable(history->buf, item);
+}
+
 static void historyRemove(CliHistory *history, const char *str) {
     if (str == NULL || history->itemsCount == 0)
         return;
-    const char *item = NULL;
+    char *item = NULL;
     int i;
     for (i = 1; i <= history->itemsCount; ++i) {
-        item = historyGet(history, i);
+        item = historyGetVariable(history, i);
         if (strcmp(item, str) == 0) {
             break;
         }
@@ -1116,5 +1168,5 @@ static void historyRemove(CliHistory *history, const char *str) {
     size_t len = strlen(item);
     size_t remaining = history->bufferSize - (item + len + 1 - history->buf);
     // move everything to the right of found item
-    memmove((char *) item, &item[len + 1], remaining);
+    memmove(item, &item[len + 1], remaining);
 }
