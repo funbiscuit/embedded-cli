@@ -1,3 +1,4 @@
+#include <cstring>
 #include "CliMock.h"
 
 CliMock::CliMock(EmbeddedCli *cli) : cli(cli) {
@@ -18,17 +19,20 @@ void CliMock::sendLine(const std::string &line) {
 }
 
 void CliMock::sendStr(const std::string &str) {
-    for (char c : str) {
+    for (char c: str) {
         embeddedCliReceiveChar(cli, c);
     }
 }
 
 void CliMock::addCommandBinding(const char *name, const char *help) {
+    //TODO memory is not released
+    char *nameCopy = new char[strlen(name) + 1];
+    strcpy(nameCopy, name);
     CliCommandBinding binding;
     binding.name = name;
     binding.help = help;
     binding.tokenizeArgs = false;
-    binding.context = (void *) name;
+    binding.context = nameCopy;
     binding.binding = [](EmbeddedCli *c, char *args, void *context) {
         auto *mock = (CliMock *) c->appContext;
         Command cmd;
@@ -53,7 +57,7 @@ std::vector<std::string> CliMock::getLines(bool trimBack, size_t *cursorColumn, 
     std::string line;
     size_t cursorPosition = 0;
 
-    for (auto c : txQueue) {
+    for (auto c: txQueue) {
         if (c == '\b') {
             if (cursorPosition > 0 && (cursorPosition - 1) < line.size()) {
                 line.erase(cursorPosition - 1, 1);
@@ -75,7 +79,7 @@ std::vector<std::string> CliMock::getLines(bool trimBack, size_t *cursorColumn, 
     output.push_back(line);
 
     if (trimBack) {
-        for (auto &l : output) {
+        for (auto &l: output) {
             trimStr(l);
         }
     }

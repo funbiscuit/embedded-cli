@@ -14,6 +14,22 @@ extern "C" {
 // cstdint is available only since C++11, so use C header
 #include <stdint.h>
 
+// currently, support only 32bit and 64bit pointers
+// used for proper alignment of cli buffer
+#if UINTPTR_MAX == 0xFFFFFFFF
+#define CLI_UINT uint32_t
+#elif UINTPTR_MAX == 0xFFFFFFFFFFFFFFFFu
+#define CLI_UINT uint64_t
+#else
+#error unsupported pointer size
+#endif
+
+#define CLI_UINT_SIZE (sizeof(CLI_UINT))
+// convert size in bytes to size in terms of CLI_UINTs (rounded up
+// if bytes is not divisible by size of single CLI_UINT)
+#define BYTES_TO_CLI_UINTS(bytes) \
+  (((bytes) + CLI_UINT_SIZE - 1)/CLI_UINT_SIZE)
+
 typedef struct CliCommand CliCommand;
 typedef struct CliCommandBinding CliCommandBinding;
 typedef struct EmbeddedCli EmbeddedCli;
@@ -134,7 +150,7 @@ struct EmbeddedCliConfig {
      * be allocated dynamically. Otherwise this buffer is used and no
      * allocations are made
      */
-    uint32_t *cliBuffer32;
+    CLI_UINT *cliBuffer;
 
     /**
      * Size of buffer for cli and internal structures.
@@ -161,6 +177,8 @@ EmbeddedCliConfig *embeddedCliDefaultConfig(void);
 /**
  * Returns how many space in config buffer is required for cli creation
  * If you provide buffer with less space, embeddedCliNew will return NULL
+ * This amount will always be divisible by CLI_UINT_SIZE so allocated buffer
+ * and internal structures can be properly aligned
  * @param config
  * @return
  */
@@ -243,7 +261,15 @@ void embeddedCliTokenizeArgs(char *args);
  * @param pos (counted from 1)
  * @return token
  */
-const char *embeddedCliGetToken(const char *tokenizedStr, uint8_t pos);
+const char *embeddedCliGetToken(const char *tokenizedStr, uint16_t pos);
+
+/**
+ * Same as embeddedCliGetToken but works on non-const buffer
+ * @param tokenizedStr
+ * @param pos (counted from 1)
+ * @return token
+ */
+char *embeddedCliGetTokenVariable(char *tokenizedStr, uint16_t pos);
 
 /**
  * Find token in provided tokens string and return its position (counted from 1)
@@ -252,14 +278,14 @@ const char *embeddedCliGetToken(const char *tokenizedStr, uint8_t pos);
  * @param token - token to find
  * @return position (increased by 1) or zero if no such token found
  */
-uint8_t embeddedCliFindToken(const char *tokenizedStr, const char *token);
+uint16_t embeddedCliFindToken(const char *tokenizedStr, const char *token);
 
 /**
  * Return number of tokens in tokenized string
  * @param tokenizedStr
  * @return number of tokens
  */
-uint8_t embeddedCliGetTokenCount(const char *tokenizedStr);
+uint16_t embeddedCliGetTokenCount(const char *tokenizedStr);
 
 #ifdef __cplusplus
 }

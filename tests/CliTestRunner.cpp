@@ -50,7 +50,7 @@ void CliTestRunner::testBase() {
     auto &commands = mock.getReceivedCommands();
 
     SECTION("Test single command") {
-        for (int i = 0; i < 50; ++i) {
+        for (size_t i = 0; i < 50; ++i) {
             mock.sendLine("set led 1 " + std::to_string(i));
 
             embeddedCliProcess(cli);
@@ -85,7 +85,7 @@ void CliTestRunner::testBase() {
         embeddedCliProcess(cli);
 
         REQUIRE(commands.size() == 3);
-        for (int i = 0; i < 3; ++i) {
+        for (size_t i = 0; i < 3; ++i) {
             REQUIRE(commands[i].name == "set");
             REQUIRE(commands[i].args == ("led 1 " + std::to_string(i)));
         }
@@ -184,13 +184,13 @@ void CliTestRunner::testHistory() {
         }
         embeddedCliProcess(cli);
 
-        for (int i = 0; i < cmds.size(); ++i) {
+        for (size_t i = 0; i < cmds.size(); ++i) {
             mock.sendStr(cmdUp);
             embeddedCliProcess(cli);
             REQUIRE(mock.getLines().back() == ("> " + cmds[cmds.size() - i - 1]));
         }
 
-        for (int i = 1; i < cmds.size(); ++i) {
+        for (size_t i = 1; i < cmds.size(); ++i) {
             mock.sendStr(cmdDown);
             embeddedCliProcess(cli);
             REQUIRE(mock.getLines().back() == ("> " + cmds[i]));

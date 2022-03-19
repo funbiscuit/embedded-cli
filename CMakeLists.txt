@@ -4,6 +4,26 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake-modules")
 
 set(CMAKE_C_STANDARD 11)
 
+if (MSVC)
+    # maybe should add more
+    add_compile_options(/Wall /WX)
+else ()
+    add_compile_options(-Werror
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wcast-align=strict
+            -Wcast-qual
+            -Wconversion
+            -Wduplicated-branches
+            -Wduplicated-cond
+            -Wfloat-equal
+            -Wlogical-op
+            -Wredundant-decls
+            -Wsign-conversion
+            -pedantic-errors)
+endif ()
+
 option(TESTS_COV "Run coverage on tests" OFF)
 
 if (${TESTS_COV})
