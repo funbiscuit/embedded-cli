@@ -377,7 +377,7 @@ EmbeddedCliConfig *embeddedCliDefaultConfig(void) {
 }
 
 uint16_t embeddedCliRequiredSize(EmbeddedCliConfig *config) {
-    uint16_t bindingCount = config->maxBindingCount + cliInternalBindingCount;
+    uint16_t bindingCount = (uint16_t) (config->maxBindingCount + cliInternalBindingCount);
     return (uint16_t) (CLI_UINT_SIZE * (
             BYTES_TO_CLI_UINTS(sizeof(EmbeddedCli)) +
             BYTES_TO_CLI_UINTS(sizeof(EmbeddedCliImpl)) +
@@ -391,7 +391,7 @@ uint16_t embeddedCliRequiredSize(EmbeddedCliConfig *config) {
 EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
     EmbeddedCli *cli = NULL;
 
-    uint16_t bindingCount = config->maxBindingCount + cliInternalBindingCount;
+    uint16_t bindingCount = (uint16_t) (config->maxBindingCount + cliInternalBindingCount);
 
     size_t totalSize = embeddedCliRequiredSize(config);
 
@@ -439,7 +439,7 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
     impl->rxBuffer.back = 0;
     impl->cmdMaxSize = config->cmdBufferSize;
     impl->bindingsCount = 0;
-    impl->maxBindingsCount = config->maxBindingCount + cliInternalBindingCount;
+    impl->maxBindingsCount = (uint16_t) (config->maxBindingCount + cliInternalBindingCount);
     impl->lastChar = '\0';
     impl->invitation = "> ";
 
@@ -607,9 +607,9 @@ uint16_t embeddedCliFindToken(const char *tokenizedStr, const char *token) {
         return 0;
 
     uint16_t size = embeddedCliGetTokenCount(tokenizedStr);
-    for (uint16_t i = 0; i < size; ++i) {
-        if (strcmp(embeddedCliGetToken(tokenizedStr, i + 1), token) == 0)
-            return i + 1;
+    for (uint16_t i = 1; i <= size; ++i) {
+        if (strcmp(embeddedCliGetToken(tokenizedStr, i), token) == 0)
+            return i;
     }
 
     return 0;
@@ -1033,7 +1033,7 @@ static bool isDisplayableChar(char c) {
 
 static uint16_t fifoBufAvailable(FifoBuf *buffer) {
     if (buffer->back >= buffer->front)
-        return buffer->back - buffer->front;
+        return (uint16_t) (buffer->back - buffer->front);
     else
         return (uint16_t) (buffer->size - buffer->front + buffer->back);
 }
