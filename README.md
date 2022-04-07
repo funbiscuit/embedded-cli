@@ -124,15 +124,20 @@ Processing should be called from one place only and it shouldn't be inside ISRs.
 state might get corrupted.
 
 ### Static allocation
-CLI can be used with statically allocated buffer for its internal structures. Required size of buffer depends on
-CLI configuration. If size is not enough, NULL is returned from ```embeddedCliNew```.
-To get required size for your config use this call:
+CLI can be used with statically allocated buffer for its internal structures. Required size of buffer depends on CLI
+configuration. If size is not enough, NULL is returned from ```embeddedCliNew```. To get required size (in bytes) for
+your config use this call:
 ```c
 uint16_t size = embeddedCliRequiredSize(config);
 ```
-Create a buffer of required size and provide it to CLI:
+
+On some architectures (for example, on some ARM devices) it is important that allocated buffer is aligned properly.
+Because of that, `cliBuffer` uses type specific for used platform (16bit on AVR, 32bit on ARM, 64bit on amd64). Actual
+integer type used to build `cliBuffer` is defined in macro `CLI_UINT`. Note that required size in bytes should be
+divided by size of `CLI_UINT`, or you can use macro `BYTES_TO_CLI_UINTS(CLI_BUFFER_SIZE)`. Create a buffer of required
+size and provide it to CLI:
 ```c
-uint8_t *cliBuffer[CLI_BUFFER_SIZE];
+CLI_UINT *cliBuffer[BYTES_TO_CLI_UINTS(CLI_BUFFER_SIZE)];
 // ...
 config->cliBuffer = cliBuffer;
 config->cliBufferSize = CLI_BUFFER_SIZE;

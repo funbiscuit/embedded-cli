@@ -13,15 +13,14 @@
  * messages are discarded.
  * For example, by removing code inside onHelp and onUnknown functions inside
  * library (and replacing help strings in bindings by nullptr's) size of FW is
- * reduced by 688 bytes of ROM and 190 bytes of RAM. Total usage is than
+ * reduced by 688 bytes of ROM and 190 bytes of RAM. Total usage is then
  * 6850 of ROM and 464 of RAM.
  */
 
 #include "embedded_cli.h"
 
 // 164 bytes is minimum size for this params on Arduino Nano
-// 82 size since CLI_UINT is 16bit for Arduino Nano
-#define CLI_BUFFER_SIZE 82
+#define CLI_BUFFER_SIZE 164
 #define CLI_RX_BUFFER_SIZE 16
 #define CLI_CMD_BUFFER_SIZE 32
 #define CLI_HISTORY_SIZE 32
@@ -29,7 +28,7 @@
 
 EmbeddedCli *cli;
 
-CLI_UINT cliBuffer[CLI_BUFFER_SIZE];
+CLI_UINT cliBuffer[BYTES_TO_CLI_UINTS(CLI_BUFFER_SIZE)];
 
 void onCommand(EmbeddedCli *embeddedCli, CliCommand *command);
 
