@@ -4,6 +4,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake-modules")
 
 set(CMAKE_C_STANDARD 11)
 
+
 option(TESTS_COV "Run coverage on tests" OFF)
 
 if (${TESTS_COV})

@@ -18,29 +18,29 @@ TEST_CASE("EmbeddedCli", "[cli]") {
 
 TEST_CASE("EmbeddedCli. Static allocation", "[cli]") {
     EmbeddedCliConfig *config = embeddedCliDefaultConfig();
-    size_t minSize = embeddedCliRequiredSize(config);
+    uint16_t minSize = embeddedCliRequiredSize(config);
     REQUIRE(minSize > 0);
 
     SECTION("Test creation") {
         INFO("Can't create CLI with small buffer")
-        for (size_t size = 1; size < minSize; ++size) {
-            std::vector<uint8_t> data(size);
+        for (uint16_t uintCount = 1; uintCount < (uint16_t) BYTES_TO_CLI_UINTS(minSize); ++uintCount) {
+            std::vector<CLI_UINT> data(uintCount);
             config->cliBuffer = data.data();
-            config->cliBufferSize = size;
+            config->cliBufferSize = uintCount * CLI_UINT_SIZE;
             REQUIRE(embeddedCliNew(config) == nullptr);
         }
         INFO("Can create CLI with buffer of minimal size")
-        std::vector<uint8_t> data(minSize);
+        std::vector<CLI_UINT> data(BYTES_TO_CLI_UINTS(minSize));
         config->cliBuffer = data.data();
-        config->cliBufferSize = minSize;
+        config->cliBufferSize = (uint16_t) data.size() * CLI_UINT_SIZE;
         EmbeddedCli *cli = embeddedCliNew(config);
 
         REQUIRE(cli != nullptr);
     }
 
-    std::vector<uint8_t> data(minSize);
+    std::vector<CLI_UINT> data(BYTES_TO_CLI_UINTS(minSize));
     config->cliBuffer = data.data();
-    config->cliBufferSize = minSize;
+    config->cliBufferSize = (uint16_t) data.size() * CLI_UINT_SIZE;
     EmbeddedCli *cli = embeddedCliNew(config);
 
     REQUIRE(cli != nullptr);

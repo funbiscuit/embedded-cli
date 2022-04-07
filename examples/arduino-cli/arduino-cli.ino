@@ -20,7 +20,8 @@
 #include "embedded_cli.h"
 
 // 164 bytes is minimum size for this params on Arduino Nano
-#define CLI_BUFFER_SIZE 164
+// 82 size since CLI_UINT is 16bit for Arduino Nano
+#define CLI_BUFFER_SIZE 82
 #define CLI_RX_BUFFER_SIZE 16
 #define CLI_CMD_BUFFER_SIZE 32
 #define CLI_HISTORY_SIZE 32
@@ -28,7 +29,7 @@
 
 EmbeddedCli *cli;
 
-uint8_t cliBuffer[CLI_BUFFER_SIZE];
+CLI_UINT cliBuffer[CLI_BUFFER_SIZE];
 
 void onCommand(EmbeddedCli *embeddedCli, CliCommand *command);
 
@@ -45,7 +46,7 @@ void setup() {
 
     EmbeddedCliConfig *config = embeddedCliDefaultConfig();
     config->cliBuffer = cliBuffer;
-    config->cliBufferSize = CLI_BUFFER_SIZE;
+    config->cliBufferSize = CLI_BUFFER_SIZE * sizeof(CLI_UINT);
     config->rxBufferSize = CLI_RX_BUFFER_SIZE;
     config->cmdBufferSize = CLI_CMD_BUFFER_SIZE;
     config->historyBufferSize = CLI_HISTORY_SIZE;
@@ -75,7 +76,7 @@ void setup() {
     embeddedCliAddBinding(cli, {
             "hello",
             "Print hello message",
-            false,
+            true,
             (void *) "World",
             onHello
     });
