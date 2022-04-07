@@ -14,9 +14,10 @@ extern "C" {
 // cstdint is available only since C++11, so use C header
 #include <stdint.h>
 
-// currently, support only 32bit and 64bit pointers
 // used for proper alignment of cli buffer
-#if UINTPTR_MAX == 0xFFFFFFFF
+#if UINTPTR_MAX == 0xFFFF
+#define CLI_UINT uint16_t
+#elif UINTPTR_MAX == 0xFFFFFFFF
 #define CLI_UINT uint32_t
 #elif UINTPTR_MAX == 0xFFFFFFFFFFFFFFFFu
 #define CLI_UINT uint64_t
@@ -153,7 +154,7 @@ struct EmbeddedCliConfig {
     CLI_UINT *cliBuffer;
 
     /**
-     * Size of buffer for cli and internal structures.
+     * Size of buffer for cli and internal structures (in bytes).
      */
     uint16_t cliBufferSize;
 };
