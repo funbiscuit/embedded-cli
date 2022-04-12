@@ -3,6 +3,8 @@ name: CMake
 on:
   push:
   pull_request:
+  release:
+    types: [ published ]
 
 env:
   BUILD_TYPE: Debug
@@ -52,7 +54,75 @@ jobs:
           name: testing
           path: ${{github.workspace}}/build/Testing
 
+      - name: Upload generated header
+        uses: actions/upload-artifact@v2
+        with:
+          name: single-header
+          path: ${{github.workspace}}/lib/shl/embedded_cli.h
+
       - name: Upload coverage to codecov
         uses: codecov/codecov-action@v2
         with:
           files: ${{ github.workspace }}/build/coverage_xml.xml
+
+  build-win:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+          - arch: Win32
+
+    runs-on: windows-2019
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/build
+        run: cmake -DBUILD_TESTS=true -G "Visual Studio 16 2019" -A ${{ matrix.arch }} ..
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: cmake --build . --config Release
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest -C $BUILD_TYPE
+
+      - name: Upload test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: testing-win-${{ matrix.arch }}
+          path: ${{github.workspace}}/build/Testing
+
+      - name: Upload windows examples
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows-example-${{ matrix.arch }}
+          path: ${{github.workspace}}/build/examples/win32-example/Release/embedded_cli_win32.exe
+
+  add-release-assets:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    needs: [ build ]
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        working-directory: artifacts
+        run: ls -R
+
+      - uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: artifacts/single-header/embedded-cli.h
+          tag: ${{ github.ref }}
+          asset_name: embedded-cli.h
+          overwrite: true

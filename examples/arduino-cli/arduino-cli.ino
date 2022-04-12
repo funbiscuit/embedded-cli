@@ -17,6 +17,7 @@
  * 6850 of ROM and 464 of RAM.
  */
 
+#define EMBEDDED_CLI_IMPL
 #include "embedded_cli.h"
 
 // 164 bytes is minimum size for this params on Arduino Nano

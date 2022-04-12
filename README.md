@@ -2,7 +2,7 @@
 
 [![codecov](https://codecov.io/gh/funbiscuit/embedded-cli/branch/master/graph/badge.svg?token=0tbOeXh0kh)](https://codecov.io/gh/funbiscuit/embedded-cli)
 
-Simple CLI library intended for use in embedded systems (like STM32 or Arduino).
+Single-header CLI library intended for use in embedded systems (like STM32 or Arduino).
 
 ![Arduino Demo](examples/arduino-demo.gif)
 
@@ -15,27 +15,38 @@ Simple CLI library intended for use in embedded systems (like STM32 or Arduino).
 * Tab (jump to end of current autocompletion) and backspace (remove char) support
 * History support (navigate with up and down keypress)
 * Any byte-stream interface is supported (for example, UART)
-
-## Introduction
-This package contains files to implement a simple command-line interface.
-The package includes cli.h, and cli.c.
+* Single-header distribution
 
 ## Integration
-* Add embedded_cli.h and embedded_cli.c to your project
-* Include the embedded_cli.h header file in your code:
+
+* You'll need to download embedded_cli.h single-header version from Releases tab. Or you can build it yourself (run
+  build-shl.py python script while inside `lib` directory)
+* Add embedded_cli.h to your project (to one of the include directories)
+* Include embedded_cli.h header file in your code where you need cli functionality:
 
 ```c
 #include "embedded_cli.h"
 ```
 
+* In one (and only one) compilation unit (.c/.cpp file) define macro to unwrap implementations:
+
+```c
+#define EMBEDDED_CLI_IMPL
+#include "embedded_cli.h"
+```
+
 ### Initialization
-To create CLI, you'll need to provide a desired config. Best way is to get default config and change desired values.
-For example, change maximum amount of command bindings:
+
+To create CLI, you'll need to provide a desired config. Best way is to get default config and change desired values. For
+example, change maximum amount of command bindings:
+
 ```c
 EmbeddedCliConfig *config = embeddedCliDefaultConfig();
 config->maxBindingCount = 16;
 ```
+
 Create an instance of CLI:
+
 ```c
 EmbeddedCli *cli = embeddedCliNew(config);
 ```
@@ -49,7 +60,8 @@ void writeChar(EmbeddedCli *embeddedCli, char c);
 // ...
 cli->writeChar = writeChar;
 ```
-After creation, provide desired bindings to CLI:
+
+After creation, provide desired bindings to CLI (can be provided at any point in runtime):
 ```c
 embeddedCliAddBinding(cli, {
         "get-led",          // command name (spaces are not allowed)
@@ -99,7 +111,7 @@ Examples of tokenization:
 |-------------------|------------|--------|--------------------------------------------------|
 | abc def           | abc        | def    | Space is treated as arg separator                |
 | "abc def"         | abc def    |        | To use space inside arg surround arg with quotes |
-| "abc\\" d\\\\ef"  | abc" d\\ef |        | To use quotes or slahes escape them              | 
+| "abc\\" d\\\\ef"  | abc" d\\ef |        | To use quotes or slashes escape them             | 
 | "abc def" test    | abc def    | test   | You can mix quoted args and non quoted           |
 | "abc def"test     | abc def    | test   | Space between quoted args is optional            |
 | "abc def""test 2" | abc def    | test 2 | Space between quoted args is optional            |
@@ -120,8 +132,9 @@ To do all the "hard" work, call process function periodically
 ```c
 embeddedCliProcess(cli);
 ```
-Processing should be called from one place only and it shouldn't be inside ISRs. Otherwise you internal
-state might get corrupted.
+
+Processing should be called from one place only and it shouldn't be inside ISRs. Otherwise, your internal state might
+get corrupted.
 
 ### Static allocation
 CLI can be used with statically allocated buffer for its internal structures. Required size of buffer depends on CLI

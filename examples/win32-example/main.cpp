@@ -9,6 +9,7 @@
 #include <chrono>
 #include <Windows.h>
 
+#define EMBEDDED_CLI_IMPL
 #include "embedded_cli.h"
 
 static bool exitFlag = false;

@@ -140,15 +140,15 @@ struct EmbeddedCliImpl {
     uint16_t maxBindingsCount;
 
     /**
-     * Stores last character that was processed.
-     */
-    char lastChar;
-
-    /**
      * Total length of input line. This doesn't include invitation but
      * includes current command and its live autocompletion
      */
     uint16_t inputLineLength;
+
+    /**
+     * Stores last character that was processed.
+     */
+    char lastChar;
 
     /**
      * Flags are defined as CLI_FLAG_*
@@ -397,7 +397,7 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
 
     bool allocated = false;
     if (config->cliBuffer == NULL) {
-        config->cliBuffer = malloc(totalSize); // malloc guarantees alignment.
+        config->cliBuffer = (CLI_UINT *) malloc(totalSize); // malloc guarantees alignment.
         if (config->cliBuffer == NULL)
             return NULL;
         allocated = true;

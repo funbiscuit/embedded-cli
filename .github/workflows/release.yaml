@@ -1,0 +1,22 @@
+name: Release
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  create-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: version
+        run: echo "::set-output name=version::${GITHUB_REF##*/}"
+        id: version
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.RELEASE_ACCESS_TOKEN }}
+          name: embedded-cli ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: true
