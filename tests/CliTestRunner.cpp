@@ -26,8 +26,8 @@ void CliTestRunner::runTests() {
         testHelp();
     }
 
-    SECTION("Autocomplete") {
-        testAutocomplete();
+    SECTION("Autocomplete enabled") {
+        testAutocompleteEnabled();
     }
 
     SECTION("Escape sequences") {
@@ -43,6 +43,35 @@ void CliTestRunner::runTests() {
             REQUIRE(lines[0] == "> test1");
             REQUIRE(cursor == 7);
         }
+    }
+}
+
+void CliTestRunner::testAutocompleteDisabled() {
+    embeddedCliProcess(cli);
+
+    mock.addCommandBinding("set");
+
+    SECTION("Live autocomplete disabled") {
+        mock.sendStr("s");
+
+        embeddedCliProcess(cli);
+
+        size_t cursor = 0;
+        auto lines = mock.getLines(false, &cursor);
+
+        REQUIRE(lines.size() == 1);
+        REQUIRE(lines[0] == "> s");
+        REQUIRE(cursor == 3);
+
+        mock.sendStr("\t");
+
+        embeddedCliProcess(cli);
+
+        lines = mock.getLines(true, &cursor);
+
+        REQUIRE(lines.size() == 1);
+        REQUIRE(lines[0] == "> set");
+        REQUIRE(cursor == 6);
     }
 }
 
@@ -179,7 +208,7 @@ void CliTestRunner::testHistory() {
 
     SECTION("When history is present, can navigate") {
         std::vector<std::string> cmds = {"command", "get", "reset", "exit"};
-        for (auto &cmd : cmds) {
+        for (auto &cmd: cmds) {
             mock.sendLine(cmd);
         }
         embeddedCliProcess(cli);
@@ -203,7 +232,7 @@ void CliTestRunner::testHistory() {
 
     SECTION("Sending command multiple times, doesn't create duplicates") {
         std::vector<std::string> cmds = {"command", "get", "command", "command"};
-        for (auto &cmd : cmds) {
+        for (auto &cmd: cmds) {
             mock.sendLine(cmd);
         }
         embeddedCliProcess(cli);
@@ -231,7 +260,7 @@ void CliTestRunner::testHistory() {
 
     SECTION("Sending command resets history cursor") {
         std::vector<std::string> cmds = {"command", "get"};
-        for (auto &cmd : cmds) {
+        for (auto &cmd: cmds) {
             mock.sendLine(cmd);
         }
         embeddedCliProcess(cli);
@@ -258,7 +287,7 @@ void CliTestRunner::testHistory() {
     }
 }
 
-void CliTestRunner::testAutocomplete() {
+void CliTestRunner::testAutocompleteEnabled() {
     mock.addCommandBinding("get");
     mock.addCommandBinding("set");
     mock.addCommandBinding("get-new");

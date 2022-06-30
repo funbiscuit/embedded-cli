@@ -52,6 +52,11 @@
  */
 #define CLI_FLAG_DIRECT_PRINT 0x10u
 
+/**
+ * Indicates that live autocompletion is enabled
+ */
+#define CLI_FLAG_AUTOCOMPLETE_ENABLED 0x20u
+
 typedef struct EmbeddedCliImpl EmbeddedCliImpl;
 typedef struct AutocompletedCommand AutocompletedCommand;
 typedef struct FifoBuf FifoBuf;
@@ -154,8 +159,6 @@ struct EmbeddedCliImpl {
      * Flags are defined as CLI_FLAG_*
      */
     uint8_t flags;
-
-  bool enableAutoComplete;
 };
 
 struct AutocompletedCommand {
@@ -375,7 +378,7 @@ EmbeddedCliConfig *embeddedCliDefaultConfig(void) {
     defaultConfig.cliBuffer = NULL;
     defaultConfig.cliBufferSize = 0;
     defaultConfig.maxBindingCount = 8;
-    defaultConfig.cliEnableAutoComplete = true;
+    defaultConfig.enableAutoComplete = true;
     return &defaultConfig;
 }
 
@@ -437,6 +440,9 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
     if (allocated)
         SET_FLAG(impl->flags, CLI_FLAG_ALLOCATED);
 
+    if (config->enableAutoComplete)
+        SET_FLAG(impl->flags, CLI_FLAG_AUTOCOMPLETE_ENABLED);
+
     impl->rxBuffer.size = config->rxBufferSize;
     impl->rxBuffer.front = 0;
     impl->rxBuffer.back = 0;
@@ -445,7 +451,6 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
     impl->maxBindingsCount = (uint16_t) (config->maxBindingCount + cliInternalBindingCount);
     impl->lastChar = '\0';
     impl->invitation = "> ";
-    impl->enableAutoComplete = config->cliEnableAutoComplete;
 
     initInternalBindings(cli);
 
@@ -940,9 +945,8 @@ static AutocompletedCommand getAutocompletedCommand(EmbeddedCli *cli, const char
 static void printLiveAutocompletion(EmbeddedCli *cli) {
     PREPARE_IMPL(cli);
 
-    if (!impl->enableAutoComplete) {
-      return;
-    }
+    if (!IS_FLAG_SET(impl->flags, CLI_FLAG_AUTOCOMPLETE_ENABLED))
+        return;
 
     AutocompletedCommand cmd = getAutocompletedCommand(cli, impl->cmdBuffer);
 
