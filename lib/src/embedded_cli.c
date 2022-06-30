@@ -154,6 +154,8 @@ struct EmbeddedCliImpl {
      * Flags are defined as CLI_FLAG_*
      */
     uint8_t flags;
+
+  bool enableAutoComplete;
 };
 
 struct AutocompletedCommand {
@@ -373,6 +375,7 @@ EmbeddedCliConfig *embeddedCliDefaultConfig(void) {
     defaultConfig.cliBuffer = NULL;
     defaultConfig.cliBufferSize = 0;
     defaultConfig.maxBindingCount = 8;
+    defaultConfig.cliEnableAutoComplete = true;
     return &defaultConfig;
 }
 
@@ -442,6 +445,7 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
     impl->maxBindingsCount = (uint16_t) (config->maxBindingCount + cliInternalBindingCount);
     impl->lastChar = '\0';
     impl->invitation = "> ";
+    impl->enableAutoComplete = config->cliEnableAutoComplete;
 
     initInternalBindings(cli);
 
@@ -935,6 +939,10 @@ static AutocompletedCommand getAutocompletedCommand(EmbeddedCli *cli, const char
 
 static void printLiveAutocompletion(EmbeddedCli *cli) {
     PREPARE_IMPL(cli);
+
+    if (!impl->enableAutoComplete) {
+      return;
+    }
 
     AutocompletedCommand cmd = getAutocompletedCommand(cli, impl->cmdBuffer);
 

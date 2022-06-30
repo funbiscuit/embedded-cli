@@ -157,6 +157,11 @@ struct EmbeddedCliConfig {
      * Size of buffer for cli and internal structures (in bytes).
      */
     uint16_t cliBufferSize;
+
+    /**
+     * Enable or disable use of autocomplete
+     */
+    bool cliEnableAutoComplete;
 };
 
 /**
@@ -171,6 +176,7 @@ struct EmbeddedCliConfig {
  * -cliBuffer     = NULL (use dynamic allocation)
  * -cliBufferSize = 0
  * -maxBindingCount = 8
+ * -cliEnableAutoComplete = true
  * @return configuration for cli creation
  */
 EmbeddedCliConfig *embeddedCliDefaultConfig(void);
