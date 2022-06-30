@@ -11,6 +11,8 @@ public:
 
     void runTests();
 
+    void testAutocompleteDisabled();
+
 private:
     EmbeddedCli *cli;
     CliMock mock;
@@ -19,7 +21,7 @@ private:
 
     void testHistory();
 
-    void testAutocomplete();
+    void testAutocompleteEnabled();
 
     void testPrinting();
 

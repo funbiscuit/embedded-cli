@@ -11,7 +11,7 @@ Single-header CLI library intended for use in embedded systems (like STM32 or Ar
 * Dynamic or static allocation
 * Configurable memory usage
 * Command-to-function binding with arguments support
-* Live autocompletion (see demo above)
+* Live autocompletion (see demo above, can be disabled)
 * Tab (jump to end of current autocompletion) and backspace (remove char) support
 * History support (navigate with up and down keypress)
 * Any byte-stream interface is supported (for example, UART)

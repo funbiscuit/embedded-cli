@@ -51,3 +51,18 @@ TEST_CASE("EmbeddedCli. Static allocation", "[cli]") {
 
     embeddedCliFree(cli);
 }
+
+
+TEST_CASE("EmbeddedCli. Disabled autocomplete", "[cli]") {
+    EmbeddedCliConfig *config = embeddedCliDefaultConfig();
+    config->enableAutoComplete = false;
+    EmbeddedCli *cli = embeddedCliNew(config);
+
+    REQUIRE(cli != nullptr);
+
+    CliTestRunner runner(cli);
+
+    runner.testAutocompleteDisabled();
+
+    embeddedCliFree(cli);
+}

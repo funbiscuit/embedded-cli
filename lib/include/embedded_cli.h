@@ -157,6 +157,13 @@ struct EmbeddedCliConfig {
      * Size of buffer for cli and internal structures (in bytes).
      */
     uint16_t cliBufferSize;
+
+    /**
+     * Whether autocompletion should be enabled.
+     * If false, autocompletion is disabled but you still can use 'tab' to
+     * complete current command manually.
+     */
+    bool enableAutoComplete;
 };
 
 /**
@@ -165,12 +172,15 @@ struct EmbeddedCliConfig {
  * Returned structure is always the same so do not free and try to use it
  * immediately.
  * Default values:
- * -rxBufferSize  = 64
- * -cmdBufferSize  = 64
- * -historyBufferSize  = 128
- * -cliBuffer     = NULL (use dynamic allocation)
- * -cliBufferSize = 0
- * -maxBindingCount = 8
+ * <ul>
+ * <li>rxBufferSize = 64</li>
+ * <li>cmdBufferSize = 64</li>
+ * <li>historyBufferSize = 128</li>
+ * <li>cliBuffer = NULL (use dynamic allocation)</li>
+ * <li>cliBufferSize = 0</li>
+ * <li>maxBindingCount = 8</li>
+ * <li>enableAutoComplete = true</li>
+ * </ul>
  * @return configuration for cli creation
  */
 EmbeddedCliConfig *embeddedCliDefaultConfig(void);
