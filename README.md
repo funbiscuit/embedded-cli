@@ -150,7 +150,7 @@ integer type used to build `cliBuffer` is defined in macro `CLI_UINT`. Note that
 divided by size of `CLI_UINT`, or you can use macro `BYTES_TO_CLI_UINTS(CLI_BUFFER_SIZE)`. Create a buffer of required
 size and provide it to CLI:
 ```c
-CLI_UINT *cliBuffer[BYTES_TO_CLI_UINTS(CLI_BUFFER_SIZE)];
+CLI_UINT cliBuffer[BYTES_TO_CLI_UINTS(CLI_BUFFER_SIZE)];
 // ...
 config->cliBuffer = cliBuffer;
 config->cliBufferSize = CLI_BUFFER_SIZE;

@@ -46,7 +46,7 @@ void setup() {
 
     EmbeddedCliConfig *config = embeddedCliDefaultConfig();
     config->cliBuffer = cliBuffer;
-    config->cliBufferSize = CLI_BUFFER_SIZE * sizeof(CLI_UINT);
+    config->cliBufferSize = CLI_BUFFER_SIZE;
     config->rxBufferSize = CLI_RX_BUFFER_SIZE;
     config->cmdBufferSize = CLI_CMD_BUFFER_SIZE;
     config->historyBufferSize = CLI_HISTORY_SIZE;
