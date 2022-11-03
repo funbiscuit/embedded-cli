@@ -12,6 +12,8 @@ SHL_TEMPLATE = """\
 {api}
 
 #ifdef EMBEDDED_CLI_IMPL
+#ifndef EMBEDDED_CLI_IMPL_GUARD
+#define EMBEDDED_CLI_IMPL_GUARD
 #ifdef __cplusplus
 extern "C" {{
 #endif
@@ -19,6 +21,7 @@ extern "C" {{
 #ifdef __cplusplus
 }}
 #endif
+#endif // EMBEDDED_CLI_IMPL_GUARD
 #endif // EMBEDDED_CLI_IMPL
 """
 
