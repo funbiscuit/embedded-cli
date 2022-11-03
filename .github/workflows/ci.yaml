@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install dependencies
         run: |
@@ -49,19 +49,19 @@ jobs:
 
       - name: Upload test logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: testing
           path: ${{github.workspace}}/build/Testing
 
       - name: Upload generated header
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: single-header
           path: ${{github.workspace}}/lib/shl/embedded_cli.h
 
       - name: Upload coverage to codecov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           files: ${{ github.workspace }}/build/coverage_xml.xml
 
@@ -76,7 +76,7 @@ jobs:
     runs-on: windows-2019
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
@@ -95,13 +95,13 @@ jobs:
 
       - name: Upload test logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: testing-win-${{ matrix.arch }}
           path: ${{github.workspace}}/build/Testing
 
       - name: Upload windows examples
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: windows-example-${{ matrix.arch }}
           path: ${{github.workspace}}/build/examples/win32-example/Release/embedded_cli_win32.exe
