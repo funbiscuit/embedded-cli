@@ -379,6 +379,7 @@ EmbeddedCliConfig *embeddedCliDefaultConfig(void) {
     defaultConfig.cliBufferSize = 0;
     defaultConfig.maxBindingCount = 8;
     defaultConfig.enableAutoComplete = true;
+    defaultConfig.invitation = "> ";
     return &defaultConfig;
 }
 
@@ -450,7 +451,7 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
     impl->bindingsCount = 0;
     impl->maxBindingsCount = (uint16_t) (config->maxBindingCount + cliInternalBindingCount);
     impl->lastChar = '\0';
-    impl->invitation = "> ";
+    impl->invitation = config->invitation;
 
     initInternalBindings(cli);
 
