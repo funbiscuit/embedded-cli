@@ -19,6 +19,7 @@ if (WIN32)
 endif (WIN32)
 
 include(CTest)
+add_subdirectory(deps/catch2)
 add_subdirectory(tests)
 add_test(CliTests tests/embedded_cli_tests)
 if (${TESTS_COV})

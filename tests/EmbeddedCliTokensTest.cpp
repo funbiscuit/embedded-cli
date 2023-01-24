@@ -1,6 +1,6 @@
 #include "embedded_cli.h"
 
-#include <catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 static void setVectorString(std::vector<char> &buffer, const std::string &str) {
     buffer.resize(str.size() + 2, '\0');
