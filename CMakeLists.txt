@@ -6,6 +6,7 @@ set(CMAKE_C_STANDARD 11)
 
 
 option(TESTS_COV "Run coverage on tests" OFF)
+option(BUILD_SINGLE_HEADER "Build single-header version" OFF)
 
 if (${TESTS_COV})
     include(CodeCoverage)
