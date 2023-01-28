@@ -13,6 +13,8 @@ public:
 
     void testAutocompleteDisabled();
 
+    void testInvitationChanged(const std::string &invitation);
+
 private:
     EmbeddedCli *cli;
     CliMock mock;

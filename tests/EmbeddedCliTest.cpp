@@ -2,6 +2,7 @@
 #include "CliMock.h"
 #include "CliTestRunner.h"
 
+#include <cstring>
 #include <catch2/catch_test_macros.hpp>
 
 TEST_CASE("EmbeddedCli", "[cli]") {
@@ -64,5 +65,22 @@ TEST_CASE("EmbeddedCli. Disabled autocomplete", "[cli]") {
 
     runner.testAutocompleteDisabled();
 
+    embeddedCliFree(cli);
+}
+
+TEST_CASE("EmbeddedCli. Invitation is changed", "[cli]") {
+    EmbeddedCliConfig *config = embeddedCliDefaultConfig();
+    const std::string invitation = "test";
+    config->invitation = (char*) malloc(invitation.length() + 1);
+    strcpy(config->invitation, invitation.c_str());
+    EmbeddedCli *cli = embeddedCliNew(config);
+
+    REQUIRE(cli != nullptr);
+
+    CliTestRunner runner(cli);
+
+    runner.testInvitationChanged(invitation);
+
+    free(config->invitation);
     embeddedCliFree(cli);
 }
