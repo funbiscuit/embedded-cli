@@ -107,7 +107,7 @@ struct EmbeddedCli {
     void (*onCommand)(EmbeddedCli *cli, CliCommand *command);
 
     /**
-     * Can be used by for any application context
+     * Can be used for any application context
      */
     void *appContext;
 
