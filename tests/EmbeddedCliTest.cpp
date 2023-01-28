@@ -66,3 +66,18 @@ TEST_CASE("EmbeddedCli. Disabled autocomplete", "[cli]") {
 
     embeddedCliFree(cli);
 }
+
+TEST_CASE("EmbeddedCli. Invitation is changed", "[cli]") {
+    EmbeddedCliConfig *config = embeddedCliDefaultConfig();
+    const std::string invitation = "test";
+    config->invitation = invitation.c_str();
+    EmbeddedCli *cli = embeddedCliNew(config);
+
+    REQUIRE(cli != nullptr);
+
+    CliTestRunner runner(cli);
+
+    runner.testInvitationChanged(invitation);
+
+    embeddedCliFree(cli);
+}

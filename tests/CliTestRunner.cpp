@@ -650,3 +650,28 @@ void CliTestRunner::testHelp() {
         REQUIRE(lines[2] == "> ");
     }
 }
+
+void CliTestRunner::testInvitationChanged(const std::string &invitation) {
+    embeddedCliProcess(cli);
+
+    SECTION("Invitation is applied to cli") {
+        size_t cursor = 0;
+        auto lines = mock.getLines(false, &cursor);
+
+        REQUIRE(lines.size() == 1);
+        REQUIRE(lines[0] == invitation);
+        REQUIRE(cursor == 4);
+
+        std::string input = "str";
+
+        mock.sendStr(input);
+
+        embeddedCliProcess(cli);
+
+        lines = mock.getLines(true, &cursor);
+
+        REQUIRE(lines.size() == 1);
+        REQUIRE(lines[0] == invitation + input);
+        REQUIRE(cursor == 7);
+    }
+}
