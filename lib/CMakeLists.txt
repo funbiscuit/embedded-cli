@@ -41,6 +41,7 @@ else ()
             -Wlogical-op
             -Wredundant-decls
             -Wsign-conversion
+            -Wwrite-strings
             -pedantic-errors)
 endif ()
 
