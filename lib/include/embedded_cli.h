@@ -125,8 +125,8 @@ struct EmbeddedCliConfig {
      * Invitation string. Is printed at the beginning of each line with user
      * input
      */
-    char *invitation;
-
+    const char *invitation;
+    
     /**
      * Size of buffer that is used to store characters until they're processed
      */
