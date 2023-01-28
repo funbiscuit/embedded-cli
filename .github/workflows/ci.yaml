@@ -15,6 +15,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: true
 
       - name: Install dependencies
         run: |
@@ -28,7 +30,7 @@ jobs:
         # access regardless of the host operating system
         shell: bash
         working-directory: ${{github.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_TESTS=true -DTESTS_COV=ON
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_SINGLE_HEADER=ON -DBUILD_TESTS=true -DTESTS_COV=ON
 
       - name: Build
         working-directory: ${{github.workspace}}/build
@@ -77,13 +79,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: true
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
-        run: cmake -DBUILD_TESTS=true -G "Visual Studio 16 2019" -A ${{ matrix.arch }} ..
+        run: cmake -DBUILD_SINGLE_HEADER=ON -DBUILD_TESTS=true -G "Visual Studio 16 2019" -A ${{ matrix.arch }} ..
 
       - name: Build
         working-directory: ${{github.workspace}}/build

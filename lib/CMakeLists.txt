@@ -1,10 +1,17 @@
 cmake_minimum_required(VERSION 3.8...3.17)
 
 # Build single-header version
-find_package(PythonInterp 3.0 REQUIRED)
-execute_process(COMMAND ${PYTHON_EXECUTABLE}
-        ${CMAKE_CURRENT_SOURCE_DIR}/build-shl.py
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+if (${BUILD_SINGLE_HEADER})
+    find_package(PythonInterp 3.0 REQUIRED)
+    execute_process(COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/build-shl.py
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+    add_library(embedded_cli_shl INTERFACE)
+    target_include_directories(embedded_cli_shl INTERFACE
+            ${CMAKE_CURRENT_SOURCE_DIR}/shl)
+    add_library(EmbeddedCLI::SingleHeader ALIAS embedded_cli_shl)
+endif ()
 
 add_library(embedded_cli_lib STATIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/embedded_cli.c
@@ -14,9 +21,6 @@ target_include_directories(embedded_cli_lib
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
         )
 
-add_library(embedded_cli_shl INTERFACE)
-target_include_directories(embedded_cli_shl INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}/shl)
 
 if (MSVC)
     # maybe should add more
@@ -41,4 +45,3 @@ else ()
 endif ()
 
 add_library(EmbeddedCLI::EmbeddedCLI ALIAS embedded_cli_lib)
-add_library(EmbeddedCLI::SingleHeader ALIAS embedded_cli_shl)

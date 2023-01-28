@@ -1,5 +1,5 @@
 
-#include <catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include "CliTestRunner.h"
 
@@ -520,7 +520,7 @@ void CliTestRunner::testPrinting() {
         REQUIRE(lines.size() == 2);
         REQUIRE(lines[0] == "test print");
         REQUIRE(lines[1] == ">"); // space is trimmed
-        INFO("Cursor at the end of invitation line")
+        INFO("Cursor at the end of invitation line");
         REQUIRE(cursor == 2);
     }
 
@@ -538,7 +538,7 @@ void CliTestRunner::testPrinting() {
         REQUIRE(lines.size() == 2);
         REQUIRE(lines[0] == "print");
         REQUIRE(lines[1] == "> " + cmd);
-        INFO("Cursor at the end of invitation line")
+        INFO("Cursor at the end of invitation line");
         REQUIRE(cursor == 2 + cmd.length());
     }
 

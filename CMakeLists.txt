@@ -6,6 +6,7 @@ set(CMAKE_C_STANDARD 11)
 
 
 option(TESTS_COV "Run coverage on tests" OFF)
+option(BUILD_SINGLE_HEADER "Build single-header version" OFF)
 
 if (${TESTS_COV})
     include(CodeCoverage)
@@ -19,6 +20,7 @@ if (WIN32)
 endif (WIN32)
 
 include(CTest)
+add_subdirectory(deps/catch2)
 add_subdirectory(tests)
 add_test(CliTests tests/embedded_cli_tests)
 if (${TESTS_COV})
