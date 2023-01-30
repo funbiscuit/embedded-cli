@@ -110,6 +110,36 @@ jobs:
           name: windows-example-${{ matrix.arch }}
           path: ${{github.workspace}}/build/examples/win32-example/Release/embedded_cli_win32.exe
 
+  build-mac:
+    runs-on: macos-12
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_SINGLE_HEADER=ON -DBUILD_TESTS=true
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: cmake --build . --config $BUILD_TYPE
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest -C $BUILD_TYPE
+
+      - name: Upload test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: testing-mac
+          path: ${{github.workspace}}/build/Testing
+
   add-release-assets:
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
