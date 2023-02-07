@@ -12,6 +12,10 @@ if (${BUILD_TESTS})
     # C++ is only used in tests
     enable_language(CXX)
     set(CMAKE_CXX_STANDARD 20)
+    if (${TESTS_COV})
+        include(CodeCoverage)
+        append_coverage_compiler_flags()
+    endif ()
 endif ()
 
 add_subdirectory(lib)
@@ -26,18 +30,10 @@ if (${BUILD_TESTS})
     add_subdirectory(tests)
     add_test(CliTests tests/embedded_cli_tests)
     if (${TESTS_COV})
-        include(CodeCoverage)
-        append_coverage_compiler_flags()
-
         setup_target_for_coverage_gcovr_xml(
                 NAME coverage_xml
-                DEPENDENCIES embedded_cli_tests embedded_cli_lib
-                EXCLUDE "tests/*"
-                EXECUTABLE embedded_cli_tests)
-        setup_target_for_coverage_gcovr_html(
-                NAME coverage_html
-                DEPENDENCIES embedded_cli_tests embedded_cli_lib
-                EXCLUDE "tests/*"
-                EXECUTABLE embedded_cli_tests)
+                EXECUTABLE ctest
+                DEPENDENCIES embedded_cli_tests
+                EXCLUDE "tests/*")
     endif ()
 endif ()

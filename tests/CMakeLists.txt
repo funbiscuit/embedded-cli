@@ -18,5 +18,9 @@ target_sources(embedded_cli_tests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/TokensTest.cpp
         )
 
-target_link_libraries(embedded_cli_tests PRIVATE EmbeddedCLI::EmbeddedCLI)
 target_link_libraries(embedded_cli_tests PRIVATE Catch2WithMain)
+if (${BUILD_SINGLE_HEADER})
+    target_link_libraries(embedded_cli_tests PRIVATE EmbeddedCLI::SingleHeader)
+else ()
+    target_link_libraries(embedded_cli_tests PRIVATE EmbeddedCLI::EmbeddedCLI)
+endif ()

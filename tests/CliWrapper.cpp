@@ -3,6 +3,11 @@
 
 #include <stdexcept>
 
+// expand implementation when single header version is tested
+#define EMBEDDED_CLI_IMPL
+
+#include "embedded_cli.h"
+
 static const std::string lineEnding = "\r\n";
 
 CliWrapper::CliWrapper(EmbeddedCli *cli, std::optional<std::unique_ptr<CLI_UINT>> buffer) {

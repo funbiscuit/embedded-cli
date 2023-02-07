@@ -11,6 +11,12 @@ env:
 
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build_single_header: OFF
+          - build_single_header: ON
     runs-on: ubuntu-latest
 
     steps:
@@ -30,7 +36,10 @@ jobs:
         # access regardless of the host operating system
         shell: bash
         working-directory: ${{github.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_SINGLE_HEADER=ON -DBUILD_TESTS=true -DTESTS_COV=ON
+        run: |
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+                                  -DBUILD_SINGLE_HEADER=${{ matrix.build_single_header }} \
+                                  -DBUILD_TESTS=true -DTESTS_COV=ON
 
       - name: Build
         working-directory: ${{github.workspace}}/build
@@ -53,16 +62,25 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v3
         with:
-          name: testing
+          name: testing-shl-${{ matrix.build_single_header }}
           path: ${{github.workspace}}/build/Testing
 
+      - name: Upload coverage
+        if: ${{ matrix.build_single_header == 'OFF' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: ${{github.workspace}}/build/coverage_xml.xml
+
       - name: Upload generated header
+        if: ${{ matrix.build_single_header == 'ON' }}
         uses: actions/upload-artifact@v3
         with:
           name: single-header
           path: ${{github.workspace}}/lib/shl/embedded_cli.h
 
       - name: Upload coverage to codecov
+        if: ${{ matrix.build_single_header == 'OFF' }}
         uses: codecov/codecov-action@v3
         with:
           files: ${{ github.workspace }}/build/coverage_xml.xml
