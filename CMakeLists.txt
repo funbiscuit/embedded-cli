@@ -4,9 +4,12 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake-modules")
 
 set(CMAKE_C_STANDARD 11)
 
-option(BUILD_TESTS "Build and run tests" OFF)
-option(TESTS_COV "Run coverage on tests" OFF)
-option(BUILD_SINGLE_HEADER "Build single-header version" OFF)
+option(BUILD_TESTS "Build and run tests"                        OFF)
+option(TESTS_COV "Run coverage on tests"                        OFF)
+option(BUILD_SINGLE_HEADER "Build single-header version"        OFF)
+option(BUILD_WINDOWS_EXAMPLE "Builds Win32 example application" OFF)
+
+
 
 if (${BUILD_TESTS})
     # C++ is only used in tests
@@ -20,11 +23,11 @@ endif ()
 
 add_subdirectory(lib)
 
-if (GENERATE_EXAMPLE_APPLICATION)
+if (BUILD_WINDOWS_EXAMPLE)
     if (WIN32)
         add_subdirectory(examples/win32-example)
     endif (WIN32)
-endif (GENERATE_EXAMPLE_APPLICATION)
+endif (BUILD_WINDOWS_EXAMPLE)
 
 if (${BUILD_TESTS})
     include(CTest)
