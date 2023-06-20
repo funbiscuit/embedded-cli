@@ -7,6 +7,7 @@ set(CMAKE_C_STANDARD 11)
 option(BUILD_TESTS "Build and run tests" OFF)
 option(TESTS_COV "Run coverage on tests" OFF)
 option(BUILD_SINGLE_HEADER "Build single-header version" OFF)
+option(BUILD_EXAMPLES "Builds example applications" OFF)
 
 if (${BUILD_TESTS})
     # C++ is only used in tests
@@ -20,9 +21,11 @@ endif ()
 
 add_subdirectory(lib)
 
-if (WIN32)
-    add_subdirectory(examples/win32-example)
-endif (WIN32)
+if (BUILD_EXAMPLES)
+    if (WIN32)
+        add_subdirectory(examples/win32-example)
+    endif (WIN32)
+endif ()
 
 if (${BUILD_TESTS})
     include(CTest)

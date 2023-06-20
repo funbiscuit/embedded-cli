@@ -4,4 +4,8 @@ target_include_directories(embedded_cli_win32 PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         )
 
-target_link_libraries(embedded_cli_win32 PRIVATE EmbeddedCLI::SingleHeader)
+if (${BUILD_SINGLE_HEADER})
+    target_link_libraries(embedded_cli_win32 PRIVATE EmbeddedCLI::SingleHeader)
+else ()
+    target_link_libraries(embedded_cli_win32 PRIVATE EmbeddedCLI::EmbeddedCLI)
+endif ()
