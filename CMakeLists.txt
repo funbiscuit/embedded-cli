@@ -20,9 +20,11 @@ endif ()
 
 add_subdirectory(lib)
 
-if (WIN32)
-    add_subdirectory(examples/win32-example)
-endif (WIN32)
+if (GENERATE_EXAMPLE_APPLICATION)
+    if (WIN32)
+        add_subdirectory(examples/win32-example)
+    endif (WIN32)
+endif (GENERATE_EXAMPLE_APPLICATION)
 
 if (${BUILD_TESTS})
     include(CTest)
