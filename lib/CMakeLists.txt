@@ -21,7 +21,7 @@ target_include_directories(embedded_cli_lib
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
         )
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+if (CMAKE_C_COMPILER_ID MATCHES "Clang")
     MESSAGE("Enable extra flags for Clang")
     target_compile_options(embedded_cli_lib PRIVATE
             -Werror
@@ -35,7 +35,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
             -Wsign-conversion
             -Wwrite-strings
             -pedantic-errors)
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+elseif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     MESSAGE("Enable extra flags for GNU")
     target_compile_options(embedded_cli_lib PRIVATE
             -Werror
@@ -53,7 +53,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
             -Wsign-conversion
             -Wwrite-strings
             -pedantic-errors)
-elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+elseif (CMAKE_C_COMPILER_ID MATCHES "MSVC")
     MESSAGE("Enable extra flags for MSVC")
     # maybe should add more
     # /WX gives too picky results
