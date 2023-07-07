@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "cli_setup.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -96,7 +96,7 @@ int main(void)
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
-
+  setupCli();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -104,7 +104,8 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+	embeddedCliProcess(getCliPointer());
+	HAL_Delay(10);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
