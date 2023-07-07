@@ -1,4 +1,4 @@
-# STM32 H7 example
+# STM32H7 example
 This STM32 UART example is created for the `STM32H750IBK6 MCU`, placed on a `Electrosmith Daisy Seed` development board. But below I have described the process, so it should be recreate-able for every STM32 MCU.
 
 # STM32CubeMX general settings
@@ -11,38 +11,38 @@ This example uses the STM32CubeMX option: "Generate peripheral initialization as
 I've also split the initialization and command binding up into multiple files, for easier re-use in other projects.
 
 # Steps to recreate
-**Step 1.**
+**Step 1.**<br>
 Enable U(S)ART in asynchronous mode. This example uses USART1, 115200 Bits/s, 8 bit words, no parity and 1 stop bit. The H7 family has quite a lot of advanced USART features. Disable at least: `Auto Baudrate`, `Overrun` and `DMA on RX Error`.
 
-**Step 2.**
+**Step 2.**<br>
 Enable USARTx Global Interrupt in the NVIC. I personally like to enable interrupt `select for init sequence order` to make sure this is the first global interrupt to be handled.
 
-**Step 3.**
+**Step 3.**<br>
 Configure your clock correctly. The board I used for this example (Electrosmith Daisy Seed), has an 16 MHz external resonator. So in RCC, I enabled HSE to: `Crystal/Ceramic resonator` with the default settings.
 Then in clock configurator I set the input frequency to 16MHz, and solved my clock issues to get an USART1 frequency of 32MHz.
 
-**Step 4.**
+**Step 4.**<br>
 Include the following `.c/.h` file combos into their corresponding source/header directories:
-    1. `embedded_cli.c/.h` (the actual CLI implementation from this repository), I have added in the most recent version at the time of creation, but make sure to symlink this as a lib, or grab the most up-to-date version manually.
-    2. `cli_setup.c/.h` (a source/header combo to seperate the setup settings from your application)
-    3. `cli_binding.c/.h` (a source/header combo to seperate the command binding from your application)
+* `embedded_cli.c/.h` (the actual CLI implementation from this repository), I have added in the most recent version at the time of creation, but make sure to symlink this as a lib, or grab the most up-to-date version manually.<br>
+* `cli_setup.c/.h` (a source/header combo to seperate the setup settings from your application)
+* `cli_binding.c/.h` (a source/header combo to seperate the command binding from your application)
 
-**Step 5.**
-Change the CLI settings to your liking in the cli_setup.h file (USART peripheral, buffer sizes etc.).
+**Step 5.**<br>
+Change the CLI settings to your liking in the `cli_setup.h` file (USART peripheral, buffer sizes etc.).
 
-**Step 6.**
-In you main application (main.c for this example), include `cli_setup.h`.
+**Step 6.**<br>
+In you main application (`main.c` for this example), include `cli_setup.h`.
 After NVIC initialization, call the `setupCli()` function.
 
-**Step 7.**
-Periodically call the `void embeddedCliProcess(EmbeddedCli *cli)` function.
-I have created a getter for the `EmbeddedCli *cli` parameter, to make sure there is always only one instance of EmbeddedCli. Easiest way to periodically call this function is to add:
-`embeddedCliProcess(getCliPointer()); HAL_Delay(10);` to the main `while(1)` loop. Change the delay to you liking, or use an RTOS for task scheduling (out of scope for this example).
+**Step 7.**<br>
+Periodically call the `void embeddedCliProcess(EmbeddedCli *cli)` function.<br>
+I have created a getter for the `EmbeddedCli *cli` parameter, to make sure there is always only one instance of EmbeddedCli. Easiest way to periodically call this function is to add:<br>
+`embeddedCliProcess(getCliPointer()); HAL_Delay(10);` to the main `while(1)` loop. <br>Change the delay to you liking, or use an RTOS for task scheduling (out of scope for this example).
 
 **Step 8.**
-That's it! Connect the debugger, upload and enjoy. Command bindings can be changed/added in `cli_binding.c`. I've left my testing bindings there for you to resuse, improve or change.
+That's it! Connect the debugger, upload and enjoy. <br>Command bindings can be changed/added in `cli_binding.c`. I've left my testing bindings there for you to resuse, improve or change.
 I also added a `cli_binding.h` file to make the callback functions accesible from code as well.
-I've used this to be able to clear the terminal output via the CLI, but also in the `setupCli()` function, after each new upload.
+<br>I've used this to be able to clear the terminal output via the CLI, but also in the `setupCli()` function, after each new upload.
 
-# stdout re-routing
-This example also uses a re-routing _write function, to be able to use printf() and the CLI at the same time. I personally like to have all my callback functions and redirections in the `cli_setup.c` file (since this example only uses 1 UART). But you can obviously move these functions to other files to make it more generic.
+# Stdout re-routing
+This example also uses a re-routing `_write()` function, to be able to use `printf()` and the CLI at the same time. I personally like to have all my callback functions and redirections in the `cli_setup.c` file (since this example only uses 1 UART). But you can obviously move these functions to other files to make it more generic.
