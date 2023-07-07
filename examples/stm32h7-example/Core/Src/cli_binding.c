@@ -10,8 +10,10 @@
 #include "cli_setup.h"
 #include "cli_binding.h"
 
+// Definition to easily access the CLI pointer.
 #define CLI getCliPointer()
 
+// Command binding for the clear command
 CliCommandBinding clear_binding = {
 	.name = "clear",
 	.help = "Clears the console",
@@ -20,6 +22,7 @@ CliCommandBinding clear_binding = {
 	.binding = onClearCLI
 };
 
+// Command binding for the led command
 CliCommandBinding led_binding = {
 	.name = "get-led",
 	.help = "Get led status",
@@ -29,10 +32,13 @@ CliCommandBinding led_binding = {
 };
 
 
+// Clears the whole terminal.
 void onClearCLI(EmbeddedCli *cli, char *args, void *context) {
 	printf("\33[2J\r\n");
 }
 
+// Example callback function, that also parses 2 arguments, and has a 'incorrect usage' output.
+// Make sure to check if 'args' != NULL, printf's '%s' formatting does not like a null pointer.
 void onLed(EmbeddedCli *cli, char *args, void *context) {
 	if(args == NULL){
 		goto usage;
@@ -52,9 +58,8 @@ void onLed(EmbeddedCli *cli, char *args, void *context) {
 		printf("usage: get-led [arg1] [arg2]\r\n");
 }
 
-
+// Command bindings you'd like to be added at setup of the CLI.
 void initCliBinding(){
-  // Add CLI command bindings
   embeddedCliAddBinding(CLI, clear_binding);
   embeddedCliAddBinding(CLI, led_binding);
 
