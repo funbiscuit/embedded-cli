@@ -10,7 +10,10 @@ This example uses the STM32CubeMX option: "Generate peripheral initialization as
 
 I've also split the initialization and command binding up into multiple files, for easier re-use in other projects.
 
-# Steps to recreate
+# Steps to recreate from IOC file
+**Step 0.**<br>
+Import project with using .ioc file to your own workspace (can be done by right clicking in `STM32CubeIDE->import->Import an Existing STM32CubeMX Configiration File (.ioc)`, or can be done directly from standalone `STM32CubeMX`). If using this .ioc file, you could skip step 1, step 2 and step 3 (these steps should already be set in the delivered .ioc file, but it's always a good idea to double check).
+
 **Step 1.**<br>
 Enable U(S)ART in asynchronous mode. This example uses USART1, 115200 Bits/s, 8 bit words, no parity and 1 stop bit. The H7 family has quite a lot of advanced USART features. Disable at least: `Auto Baudrate`, `Overrun` and `DMA on RX Error`.
 
@@ -23,12 +26,12 @@ Then in clock configurator I set the input frequency to 16MHz, and solved my clo
 
 **Step 4.**<br>
 Include the following `.c/.h` file combos into their corresponding source/header directories:
-* `embedded_cli.c/.h` (the actual CLI implementation from this repository), I have added in the most recent version at the time of creation, but make sure to symlink this as a lib, or grab the most up-to-date version manually.<br>
-* `cli_setup.c/.h` (a source/header combo to seperate the setup settings from your application)
-* `cli_binding.c/.h` (a source/header combo to seperate the command binding from your application)
+* `embedded_cli.c/.h` (can be found in the root of this repository, in the folder `lib`)<br>
+* `cli_setup.c/.h` (a source/header combo to seperate the setup settings from your application, found in this stm32h7-example folder)
+* `cli_binding.c/.h` (a source/header combo to seperate the command binding from your application, found in this stm32h7-example folder)
 
 **Step 5.**<br>
-Change the CLI settings to your liking in the `cli_setup.h` file (USART peripheral, buffer sizes etc.).
+Change the CLI settings to your liking in the `cli_setup.h` file (USART peripheral as enabled in your .ioc settings, buffer sizes etc.).
 
 **Step 6.**<br>
 In you main application (`main.c` for this example), include `cli_setup.h`.
@@ -46,3 +49,7 @@ I also added a `cli_binding.h` file to make the callback functions accesible fro
 
 # Stdout re-routing
 This example also uses a re-routing `_write()` function, to be able to use `printf()` and the CLI at the same time. I personally like to have all my callback functions and redirections in the `cli_setup.c` file (since this example only uses 1 UART). But you can obviously move these functions to other files to make it more generic.
+
+# Implemented example
+In the following repository, you can find a fully implemented reference project, for the `STM32H750IBK6` MCU including all needed HAL driver files & peripheral initialization files. This repository is ready to be built and flashed to the MCU. This way you would not need the STM32CubeIDE or STM32CubeMX software installed to try out the example.
+https://github.com/NeusAap/embedded-cli-stm32h7-reference
