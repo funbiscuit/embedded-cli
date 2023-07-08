@@ -25,8 +25,9 @@ Configure your clock correctly. The board I used for this example (Electrosmith 
 Then in clock configurator I set the input frequency to 16MHz, and solved my clock issues to get an USART1 frequency of 32MHz.
 
 **Step 4.**<br>
-Include the following `.c/.h` file combos into their corresponding source/header directories:
-* `embedded_cli.c/.h` (can be found in the root of this repository, in the folder `lib`)<br>
+Copy the following `.c` and or `.h` files into their corresponding source/header directories:
+* `embedded_cli.c` (can be found in the root of this repository, in the folder `lib/src`)<br>
+* `embedded_cli.h` (can be found in the root of this repository, in the folder `lib/include`)<br>
 * `cli_setup.c/.h` (a source/header combo to seperate the setup settings from your application, found in this stm32h7-example folder)
 * `cli_binding.c/.h` (a source/header combo to seperate the command binding from your application, found in this stm32h7-example folder)
 
