@@ -33,7 +33,7 @@ static CliCommandBinding led_binding = {
 
 // Clears the whole terminal.
 void onClearCLI(EmbeddedCli *cli, char *args, void *context) {
-    cli_printf(CLI, "\33[2J\r\n");
+    cli_printf(CLI, "\33[2J");
 }
 
 // Example callback function, that also parses 2 arguments, and has a 'incorrect usage' output.
@@ -41,11 +41,11 @@ void onLed(EmbeddedCli *cli, char *args, void *context) {
     const char * arg1 = embeddedCliGetToken(args, 1);
     const char * arg2 = embeddedCliGetToken(args, 2);
     if (arg1 == NULL || arg2 == NULL){
-        cli_printf(CLI, "usage: get-led [arg1] [arg2]\r\n");
+        cli_printf(CLI, "usage: get-led [arg1] [arg2]");
         return;
     }
     // Make sure to check if 'args' != NULL, printf's '%s' formatting does not like a null pointer.
-    cli_printf(CLI, "LED with args: %s and %s\r\n", arg1, arg2);
+    cli_printf(CLI, "LED with args: %s and %s", arg1, arg2);
 }
 
 // Function to bind command bindings you'd like to be added at setup of the CLI.

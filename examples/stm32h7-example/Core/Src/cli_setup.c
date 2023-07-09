@@ -107,7 +107,6 @@ void cli_printf(EmbeddedCli *cli, const char *format, ...)
     // Check if string fitted in buffer else print error to stderr
     if (length < 0)
     {
-        // Handle error
         fprintf(stderr, "Error formatting the string\r\n");
         return;
     }
