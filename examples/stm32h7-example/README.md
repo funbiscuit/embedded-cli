@@ -2,7 +2,7 @@
 This STM32 UART example is created for the `STM32H750IBK6 MCU`, placed on a `Electrosmith Daisy Seed` development board. But below I have described the process, so it should be recreate-able for every STM32 MCU.
 
 # STM32CubeMX general settings
-This example is using UART interrupts for each received character, and has re-routed (and buffered) _write function for easy prints to the CLI. All written in C.
+This example is using UART interrupts for each received character, and has a `cli_printf()` function to easily be able to print formatted strings to the CLI, without the cursor location being incorrect. All written in C.
 
 I have created it using the STM32 HAL, and using the STM32CubeMX configurator (.ioc file), but the process should be more/less the same for LL drivers & using custom cmake files.
 
@@ -32,7 +32,7 @@ Copy the following `.c` and or `.h` files into their corresponding source/header
 * `cli_binding.c/.h` (a source/header combo to seperate the command binding from your application, found in this stm32h7-example folder)
 
 **Step 5.**<br>
-Change the CLI settings to your liking in the `cli_setup.h` file (USART peripheral as enabled in your .ioc settings, buffer sizes etc.).
+Change the CLI settings to your liking in the `cli_setup.h` file (USART peripheral as enabled in your .ioc settings, buffer sizes, `cli_printf()` max length etc).
 
 **Step 6.**<br>
 In you main application (`main.c` for this example), include `cli_setup.h`.
@@ -48,8 +48,8 @@ That's it! Connect the debugger, upload and enjoy. <br>Command bindings can be c
 I also added a `cli_binding.h` file to make the callback functions accesible from code as well.
 <br>I've used this to be able to clear the terminal output via the CLI, but also in the `setupCli()` function, after each new upload.
 
-# Stdout re-routing
-This example also uses a re-routing `_write()` function, to be able to use `printf()` and the CLI at the same time. I personally like to have all my callback functions and redirections in the `cli_setup.c` file (since this example only uses 1 UART). But you can obviously move these functions to other files to make it more generic.
+# Printing to the CLI
+This example also uses an encapsulation function, to be able to use `printf()` and the CLI at the same time without any characters being out of place (function called `cli_printf`). I personally like to have all my callback functions and re-directions and encapsulation functions in the `cli_setup.c` file (since this example only uses 1 UART). But you can obviously move these functions to other files to make it more generic.
 
 # Implemented example
 In the following repository, you can find a fully implemented reference project, for the `STM32H750IBK6` MCU including all needed HAL driver files & peripheral initialization files. This repository is ready to be built and flashed to the MCU. This way you would not need the STM32CubeIDE or STM32CubeMX software installed to try out the example.

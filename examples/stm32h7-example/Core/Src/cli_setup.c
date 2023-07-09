@@ -9,6 +9,7 @@
 // STD LIBS
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 // STM files
 #include "usart.h"
@@ -19,15 +20,10 @@
 #include "cli_binding.h"
 
 // UART buffers
-uint8_t UART_CLI_rxBuffer[UART_RX_BUFF_SIZE] = {0};
-struct {
-    char buffer[UART_TX_BUFFER_SIZE];
-    uint8_t index;
-} UART_CLI_txBuffer = { .index = 0 };
-
+static uint8_t UART_CLI_rxBuffer[UART_RX_BUFF_SIZE] = {0};
 // CLI buffer
-EmbeddedCli *cli;
-CLI_UINT cliBuffer[BYTES_TO_CLI_UINTS(CLI_BUFFER_SIZE)];
+static EmbeddedCli *cli;
+static CLI_UINT cliBuffer[BYTES_TO_CLI_UINTS(CLI_BUFFER_SIZE)];
 
 // Bool to disable the interrupts, if CLI is not yet ready.
 static bool cliIsReady = false;
@@ -95,24 +91,27 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     }
 }
 
-// Custom write function to route printf statements to the CLI.
-// Input is buffered until buffer is full, or \n is encountered to reduce HAL calls.
-void custom_write(int file, char *ptr, int len) {
-    int i;
+// Function to encapsulate the 'embeddedCliPrint()' call with print formatting arguments (act like printf(), but keeps cursor at correct location).
+// The 'embeddedCliPrint()' function does already add a linebreak ('\r\n') to the end of the print statement, so no need to add it yourself.
+void cli_printf(EmbeddedCli *cli, const char *format, ...)
+{
+    // Create a buffer to store the formatted string
+    char buffer[CLI_PRINT_BUFFER_SIZE];
 
-    for (i = 0; i < len; i++) {
-        UART_CLI_txBuffer.buffer[UART_CLI_txBuffer.index++] = *ptr++;
+    // Format the string using snprintf
+    va_list args;
+    va_start(args, format);
+    int length = vsnprintf(buffer, sizeof(buffer), format, args);
+    va_end(args);
 
-        // Check if the buffer is full or a newline character is encountered
-        if (UART_CLI_txBuffer.index == UART_TX_BUFFER_SIZE || *(ptr - 1) == '\n') {
-            HAL_UART_Transmit(UART_CLI_PERIPH, (uint8_t*)UART_CLI_txBuffer.buffer, UART_CLI_txBuffer.index, 100);
-            UART_CLI_txBuffer.index = 0;
-        }
+    // Check if string fitted in buffer else print error to stderr
+    if (length < 0)
+    {
+        // Handle error
+        fprintf(stderr, "Error formatting the string\r\n");
+        return;
     }
-}
 
-// Redirect stdout to custom _write function
-int _write(int file, char *ptr, int len) {
-    custom_write(file, ptr, len);
-    return len;
+    // Call embeddedCliPrint with the formatted string
+    embeddedCliPrint(cli, buffer);
 }
