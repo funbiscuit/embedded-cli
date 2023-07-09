@@ -28,13 +28,8 @@ static CLI_UINT cliBuffer[BYTES_TO_CLI_UINTS(CLI_BUFFER_SIZE)];
 // Bool to disable the interrupts, if CLI is not yet ready.
 static bool cliIsReady = false;
 
-// Getter function, to keep only one instance of the EmbeddedCli pointer in this file.
-EmbeddedCli* getCliPointer(){
-    return cli;
-}
-
 // Write function used in 'setupCli()' to route the chars over UART.
-void writeCharToCli(EmbeddedCli *embeddedCli, char c){
+static void writeCharToCli(EmbeddedCli *embeddedCli, char c){
     uint8_t c_to_send = c;
     HAL_UART_Transmit(UART_CLI_PERIPH, &c_to_send, 1, 100);
 }
@@ -113,4 +108,9 @@ void cli_printf(EmbeddedCli *cli, const char *format, ...)
 
     // Call embeddedCliPrint with the formatted string
     embeddedCliPrint(cli, buffer);
+}
+
+// Getter function, to keep only one instance of the EmbeddedCli pointer in this file.
+EmbeddedCli* getCliPointer(){
+    return cli;
 }

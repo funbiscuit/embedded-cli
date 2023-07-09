@@ -30,9 +30,6 @@
 // Function to setup the configuration settings for the CLI, based on the definitions from this header file
 void setupCli();
 
-// Write function used in 'setupCli()' to route the chars over UART.
-void writeCharToCli(EmbeddedCli *embeddedCli, char c);
-
 // Function to encapsulate the 'embeddedCliPrint()' call with print formatting arguments (act like printf(), but keeps cursor at correct location).
 // The 'embeddedCliPrint()' function does already add a linebreak ('\r\n') to the end of the print statement, so no need to add it yourself.
 void cli_printf(EmbeddedCli *cli, const char *format, ...);
