@@ -5,7 +5,9 @@
 
 #define CLI_TOKEN_NPOS 0xffff
 
+#ifndef UNUSED
 #define UNUSED(x) (void)x
+#endif
 
 #define PREPARE_IMPL(t) \
   EmbeddedCliImpl* impl = (EmbeddedCliImpl*)t->_impl

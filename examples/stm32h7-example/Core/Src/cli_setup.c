@@ -111,3 +111,7 @@ void cli_printf(const char *format, ...) {
     // Call embeddedCliPrint with the formatted string
     embeddedCliPrint(getCliPointer(), buffer);
 }
+
+EmbeddedCli *getCliPointer() {
+    return cli;
+}
