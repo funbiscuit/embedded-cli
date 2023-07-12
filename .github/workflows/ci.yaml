@@ -85,6 +85,25 @@ jobs:
         with:
           files: ${{ github.workspace }}/build/coverage_xml.xml
 
+  build-arduino-example:
+      runs-on: ubuntu-latest
+
+      steps:
+        - uses: actions/checkout@v3
+
+        - name: Generate single header lib
+          working-directory: ${{github.workspace}}/lib
+          run: python3 build-shl.py
+
+        - name: Copy single header file to sketch dir
+          run: cp ${{github.workspace}}/lib/shl/embedded_cli.h ${{github.workspace}}/examples/arduino-cli/embedded_cli.h
+
+        - name: Compile arduino sketch
+          uses: arduino/compile-sketches@v1
+          with:
+            sketch-paths: |
+              - examples/arduino-cli
+
   build-win:
     strategy:
       fail-fast: false

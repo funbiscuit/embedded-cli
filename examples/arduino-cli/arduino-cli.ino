@@ -1,6 +1,6 @@
 /**
  * Simple example of using embedded-cli in arduino.
- * To compile copy embedded-cli.h and embedded-cli.c to sketch directory.
+ * To compile copy embedded-cli.h (single header version) to sketch directory.
  *
  * With specified settings:
  * 32 bytes for cmd buffer, 16 for RX buffer,
