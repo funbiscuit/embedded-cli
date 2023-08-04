@@ -235,6 +235,12 @@ static void onControlInput(EmbeddedCli *cli, char c);
 static void parseCommand(EmbeddedCli *cli);
 
 /**
+ * Print help for given binding (if it is set)
+ * @param binding
+ */
+static void printBindingHelp(EmbeddedCli *cli, CliCommandBinding *binding);
+
+/**
  * Setup bindings for internal commands, like help
  * @param cli
  */
@@ -798,7 +804,12 @@ static void parseCommand(EmbeddedCli *cli) {
                 embeddedCliTokenizeArgs(cmdArgs);
             // currently, output is blank line, so we can just print directly
             SET_FLAG(impl->flags, CLI_FLAG_DIRECT_PRINT);
-            impl->bindings[i].binding(cli, cmdArgs, impl->bindings[i].context);
+            // check if help was requested (help is printed when no other options are set)
+            if (cmdArgs != NULL && (strcmp(cmdArgs, "-h") == 0 || strcmp(cmdArgs, "--help") == 0)) {
+                printBindingHelp(cli, &impl->bindings[i]);
+            } else {
+                impl->bindings[i].binding(cli, cmdArgs, impl->bindings[i].context);
+            }
             UNSET_U8FLAG(impl->flags, CLI_FLAG_DIRECT_PRINT);
             return;
         }
@@ -817,6 +828,14 @@ static void parseCommand(EmbeddedCli *cli) {
         UNSET_U8FLAG(impl->flags, CLI_FLAG_DIRECT_PRINT);
     } else {
         onUnknownCommand(cli, cmdName);
+    }
+}
+
+static void printBindingHelp(EmbeddedCli *cli, CliCommandBinding *binding) {
+    if (binding->help != NULL) {
+        cli->writeChar(cli, '\t');
+        writeToOutput(cli, binding->help);
+        writeToOutput(cli, lineBreak);
     }
 }
 
@@ -847,11 +866,7 @@ static void onHelp(EmbeddedCli *cli, char *tokens, void *context) {
             writeToOutput(cli, " * ");
             writeToOutput(cli, impl->bindings[i].name);
             writeToOutput(cli, lineBreak);
-            if (impl->bindings[i].help != NULL) {
-                cli->writeChar(cli, '\t');
-                writeToOutput(cli, impl->bindings[i].help);
-                writeToOutput(cli, lineBreak);
-            }
+            printBindingHelp(cli, &impl->bindings[i]);
         }
     } else if (tokenCount == 1) {
         // try find command
