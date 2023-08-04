@@ -798,6 +798,11 @@ static void parseCommand(EmbeddedCli *cli) {
                 embeddedCliTokenizeArgs(cmdArgs);
             // currently, output is blank line, so we can just print directly
             SET_FLAG(impl->flags, CLI_FLAG_DIRECT_PRINT);
+            const char *arg1 = embeddedCliGetToken(cmdArgs, 1);
+            if(strcmp(arg1, "-h") == 0) {
+            	embeddedCliPrint(cli ,impl->bindings[i].help);
+            	return;
+            }
             impl->bindings[i].binding(cli, cmdArgs, impl->bindings[i].context);
             UNSET_U8FLAG(impl->flags, CLI_FLAG_DIRECT_PRINT);
             return;
