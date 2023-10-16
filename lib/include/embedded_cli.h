@@ -170,6 +170,12 @@ struct EmbeddedCliConfig {
      * complete current command manually.
      */
     bool enableAutoComplete;
+
+    /**
+     * Enable auto carrige return and line feed
+     * If false, you need to manually send \r\n after each line
+     */
+    bool enableAutoCRLF;
 };
 
 /**
@@ -186,6 +192,7 @@ struct EmbeddedCliConfig {
  * <li>cliBufferSize = 0</li>
  * <li>maxBindingCount = 8</li>
  * <li>enableAutoComplete = true</li>
+ * <li>enableAutoCRLF = true</li>
  * </ul>
  * @return configuration for cli creation
  */

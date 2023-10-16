@@ -59,6 +59,11 @@
  */
 #define CLI_FLAG_AUTOCOMPLETE_ENABLED 0x20u
 
+/**
+ * Indicates that autocompletion should be enabled.
+ */
+#define CLI_FLAG_AUTOCRLF_ENABLED 0x40u
+
 typedef struct EmbeddedCliImpl EmbeddedCliImpl;
 typedef struct AutocompletedCommand AutocompletedCommand;
 typedef struct FifoBuf FifoBuf;
@@ -388,6 +393,7 @@ EmbeddedCliConfig *embeddedCliDefaultConfig(void) {
     defaultConfig.maxBindingCount = 8;
     defaultConfig.enableAutoComplete = true;
     defaultConfig.invitation = "> ";
+    defaultConfig.enableAutoCRLF = true;
     return &defaultConfig;
 }
 
@@ -451,6 +457,9 @@ EmbeddedCli *embeddedCliNew(EmbeddedCliConfig *config) {
 
     if (config->enableAutoComplete)
         SET_FLAG(impl->flags, CLI_FLAG_AUTOCOMPLETE_ENABLED);
+
+    if (config->enableAutoCRLF)
+        SET_FLAG(impl->flags, CLI_FLAG_AUTOCRLF_ENABLED);
 
     impl->rxBuffer.size = config->rxBufferSize;
     impl->rxBuffer.front = 0;
@@ -540,7 +549,10 @@ void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
 
     // print provided string
     writeToOutput(cli, string);
-    writeToOutput(cli, lineBreak);
+    // Only print CRLF if enabled
+    if (IS_FLAG_SET(impl->flags, CLI_FLAG_AUTOCRLF_ENABLED)) {
+        writeToOutput(cli, lineBreak);
+    }
 
     // print current command back to screen
     if (!IS_FLAG_SET(impl->flags, CLI_FLAG_DIRECT_PRINT)) {
