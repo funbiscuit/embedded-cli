@@ -1,7 +1,7 @@
 /**
  * Simple example of using embedded-cli in Linux application.
- * Shameless stolen from Win32 version and modified to run under Linux
- * Create emulator of terminal which prints entered commands and args
+ * Shamelessly stolen from Win32 version and modified to run under Linux
+ * Runs in terminal / console, using stdio, prints entered commands and args
  */
 
 #include <stdio.h>
@@ -86,6 +86,7 @@ int main() {
     embeddedCliProcess(cli);
 
     while (!exitFlag) {
+	/* grab the next character and feed it to the CLI processor */
         if(read(STDIN_FILENO,&c,1)>0) {
      		 embeddedCliReceiveChar(cli, c);
     		 embeddedCliProcess(cli);
