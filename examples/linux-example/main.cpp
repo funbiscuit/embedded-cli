@@ -1,5 +1,6 @@
 /**
- * Simple example of using embedded-cli in win32 application.
+ * Simple example of using embedded-cli in Linux application.
+ * Shameless stolen from Win32 version and modified to run under Linux
  * Create emulator of terminal which prints entered commands and args
  */
 
@@ -8,7 +9,6 @@
 #include <termios.h>
 
 #include <iostream>
-#include <thread>
 #include <string>
 
 #define EMBEDDED_CLI_IMPL
