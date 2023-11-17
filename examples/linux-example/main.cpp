@@ -27,14 +27,14 @@ void onLed(EmbeddedCli *cli, char *args, void *context);
 void onAdc(EmbeddedCli *cli, char *args, void *context);
 
 int main() {
-    /* single character buffer for reading keystrokes */
+    // Single character buffer for reading keystrokes
     unsigned char c;
     
-    /* Structures to save the terminal settings for original settings & raw mode */
+    // Structures to save the terminal settings for original settings & raw mode
     struct termios original_stdin;
     struct termios raw_stdin;
 
-    /* Backup the terminal settings, and switch to raw mode */
+    // Backup the terminal settings, and switch to raw mode
     tcgetattr(STDIN_FILENO, &original_stdin);
     raw_stdin = original_stdin;
     cfmakeraw(&raw_stdin);
@@ -47,7 +47,7 @@ int main() {
         onCommand(command->name == nullptr ? "" : command->name, command->args);
     };
     cli->writeChar = [](EmbeddedCli *embeddedCli, char c) {
-    	write(STDOUT_FILENO, &c, 1);
+        write(STDOUT_FILENO, &c, 1);
     };
 
     embeddedCliAddBinding(cli, {
@@ -86,14 +86,14 @@ int main() {
     embeddedCliProcess(cli);
 
     while (!exitFlag) {
-	/* grab the next character and feed it to the CLI processor */
+        // grab the next character and feed it to the CLI processor
         if(read(STDIN_FILENO,&c,1)>0) {
-     		 embeddedCliReceiveChar(cli, c);
-    		 embeddedCliProcess(cli);
+            embeddedCliReceiveChar(cli, c);
+            embeddedCliProcess(cli);
         }
-        }
+    }
 
-    /* restore terminal settings */
+    // restore terminal settings
     tcsetattr(STDIN_FILENO, TCSANOW, &original_stdin);
     
     return 0;
@@ -114,10 +114,12 @@ void onExit(EmbeddedCli *cli, char *args, void *context) {
 
 void onHello(EmbeddedCli *cli, char *args, void *context) {
     std::cout << "Hello, ";
-    if (embeddedCliGetTokenCount(args) == 0)
+    if (embeddedCliGetTokenCount(args) == 0) {
         std::cout << (const char *) context;
-    else
+    }
+    else {
         std::cout << embeddedCliGetToken(args, 1);
+    }
     std::cout << "\r\n";
 }
 
