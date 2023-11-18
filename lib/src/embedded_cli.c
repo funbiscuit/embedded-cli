@@ -38,13 +38,12 @@
 
 /**
  * Indicates that CLI structure and internal structures were allocated with
- * malloc and should bre freed
+ * malloc and should be freed
  */
 #define CLI_FLAG_ALLOCATED 0x04u
 
 /**
- * Indicates that CLI structure and internal structures were allocated with
- * malloc and should bre freed
+ * Indicates that escape mode is enabled.
  */
 #define CLI_FLAG_ESCAPE_MODE 0x08u
 
