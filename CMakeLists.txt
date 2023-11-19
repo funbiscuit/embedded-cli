@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8...3.17)
-project(embedded_cli C)
+project(embedded_cli C CXX)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake-modules")
 
 set(CMAKE_C_STANDARD 11)
