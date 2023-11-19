@@ -9,10 +9,13 @@ option(TESTS_COV "Run coverage on tests" OFF)
 option(BUILD_SINGLE_HEADER "Build single-header version" OFF)
 option(BUILD_EXAMPLES "Builds example applications" OFF)
 
-if (${BUILD_TESTS})
-    # C++ is only used in tests
+if (BUILD_TESTS OR BUILD_EXAMPLES)
+    # C++ is only used in tests and examples
     enable_language(CXX)
     set(CMAKE_CXX_STANDARD 20)
+endif ()
+
+if (${BUILD_TESTS})
     if (${TESTS_COV})
         include(CodeCoverage)
         append_coverage_compiler_flags()
