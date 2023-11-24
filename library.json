@@ -1,0 +1,17 @@
+{
+    "name": "embedded-cli",
+    "version": "0.1.3",
+    "description" : "Single-header CLI library intended for use in embedded systems.",
+    "keywords": "CLI, Client, Line, Interface, Terminal, Embedded",
+    "license": "MIT",
+    "repository":
+    {
+        "type": "git",
+        "url": "https://github.com/funbiscuit/embedded-cli"
+    },
+    "build": {
+        "libArchive": false,
+        "includeDir": "lib/include/",
+        "srcDir": "lib/src/"
+    } 
+}
