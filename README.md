@@ -2,6 +2,12 @@
 
 [![codecov](https://codecov.io/gh/funbiscuit/embedded-cli/branch/master/graph/badge.svg?token=0tbOeXh0kh)](https://codecov.io/gh/funbiscuit/embedded-cli)
 
+> [!NOTE]  
+> This library is in maintenance mode. Take a look at full rewrite in Rust:
+> [embedded-cli-rs](https://github.com/funbiscuit/embedded-cli-rs).
+> It has all features of this library and more: utf-8 support,
+> lower memory usage, static dispatch and argument parsing.
+
 Single-header CLI library intended for use in embedded systems (like STM32 or Arduino).
 
 ![Arduino Demo](examples/arduino-demo.gif)
