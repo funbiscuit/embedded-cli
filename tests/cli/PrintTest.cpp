@@ -8,6 +8,7 @@ TEST_CASE("CLI. Printing", "[cli]") {
     CliWrapper cli = CliBuilder().build();
 
     SECTION("Print with no command input") {
+        cli.process();
         cli.print("test print");
 
         auto display = cli.getDisplay();

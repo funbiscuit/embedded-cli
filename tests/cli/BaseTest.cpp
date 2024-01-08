@@ -110,6 +110,39 @@ TEST_CASE("CLI. Base tests", "[cli]") {
         REQUIRE(commands.back().args[0] == "led");
     }
 
+    SECTION("Move cursor left") {
+        cli.send("get lft\x1B[D\x1B[De");
+        cli.process();
+
+        auto displayed = cli.getDisplay();
+
+        REQUIRE(displayed.lines.size() == 1);
+        REQUIRE(displayed.lines[0] == "> get left");
+        REQUIRE(displayed.cursorColumn == 8);
+    }
+
+    SECTION("Move cursor right") {
+        cli.send("get right\x1B[C\x1B[C");
+        cli.process();
+
+        auto displayed = cli.getDisplay();
+
+        REQUIRE(displayed.lines.size() == 1);
+        REQUIRE(displayed.lines[0] == "> get right");
+        REQUIRE(displayed.cursorColumn == 11);
+    }
+
+    SECTION("Move cursor left then right") {
+        cli.send("ge oth\x1B[D\x1B[D\x1B[D\x1B[Dt\x1B[Cb");
+        cli.process();
+
+        auto displayed = cli.getDisplay();
+
+        REQUIRE(displayed.lines.size() == 1);
+        REQUIRE(displayed.lines[0] == "> get both");
+        REQUIRE(displayed.cursorColumn == 7);
+    }
+
     SECTION("Unknown command") {
         // unknown commands are only possible when onCommand callback is not set
         cli.raw()->onCommand = nullptr;
@@ -152,7 +185,7 @@ TEST_CASE("CLI. Base tests", "[cli]") {
 
     SECTION("Escape sequences") {
         SECTION("Escape sequences don't show up in output") {
-            cli.send("t\x1B[Ae\x1B[10As\x1B[Bt\x1B[C\x1B[D1");
+            cli.send("t\x1B[Ae\x1B[10As\x1B[Bt\x1B[D\x1B[C1");
             cli.process();
 
             auto displayed = cli.getDisplay();
