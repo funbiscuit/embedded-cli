@@ -59,6 +59,16 @@
  */
 #define CLI_FLAG_AUTOCOMPLETE_ENABLED 0x20u
 
+/**
+* Indicates that cursor direction should be forward
+*/
+#define CURSOR_DIRECTION_FORWARD true
+
+/**
+* Indicates that cursor direction should be backward
+*/
+#define CURSOR_DIRECTION_BACKWARD false
+
 typedef struct EmbeddedCliImpl EmbeddedCliImpl;
 typedef struct AutocompletedCommand AutocompletedCommand;
 typedef struct FifoBuf FifoBuf;
@@ -330,8 +340,9 @@ static void writeToOutput(EmbeddedCli *cli, const char *str);
  * Move cursor forward (right) by given number of positions
  * @param cli
  * @param count
+ * @param direction: true = forward (right), false = backward (left)
  */
-static void moveCursorForwardBy(EmbeddedCli* cli, uint16_t count);
+static void moveCursor(EmbeddedCli* cli, uint16_t count, bool direction);
 
 /**
  * Returns true if provided char is a supported control char:
@@ -570,7 +581,6 @@ void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
 
     // remove chars for autocompletion and live command
     if (!IS_FLAG_SET(impl->flags, CLI_FLAG_DIRECT_PRINT)){
-        writeToOutput(cli, escSeqCursorSave);
         clearCurrentLine(cli);
     }
 
@@ -583,7 +593,7 @@ void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
         writeToOutput(cli, impl->invitation);
         writeToOutput(cli, impl->cmdBuffer);
         impl->inputLineLength = impl->cmdSize;
-        writeToOutput(cli, escSeqCursorRestore);
+        moveCursor(cli, impl->cursorPos, CURSOR_DIRECTION_BACKWARD);
 
         printLiveAutocompletion(cli);
     }
@@ -1032,7 +1042,7 @@ static void printLiveAutocompletion(EmbeddedCli *cli) {
     writeToOutput(cli, escSeqCursorSave);
 
     if (impl->cursorPos > 0) {
-        moveCursorForwardBy(cli, impl->cursorPos);
+        moveCursor(cli, impl->cursorPos, CURSOR_DIRECTION_FORWARD);
     }
 
     // print live autocompletion (or nothing, if it doesn't exist)
@@ -1115,10 +1125,11 @@ static void writeToOutput(EmbeddedCli *cli, const char *str) {
     }
 }
 
-static void moveCursorForwardBy(EmbeddedCli* cli, uint16_t count) {
+static void moveCursor(EmbeddedCli* cli, uint16_t count, bool direction) {
     // 5 = uint16_t max, 3 = escape sequence, 1 = string termination
-    char escBuffer[5 + 3 + 1] = { 0 }; 
-    sprintf(&escBuffer, "\x1B[%uC", count);
+    char escBuffer[5 + 3 + 1] = { 0 };
+    char dirChar = direction ? escSeqCursorRight[5] : escSeqCursorLeft[5];
+    sprintf(&escBuffer, "\x1B[%u%c", count, dirChar);
     writeToOutput(cli, escBuffer);
 }
 
