@@ -214,22 +214,22 @@ static const char *lineBreak = "\r\n";
 /* Reference for VT100 escape sequences: https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences */
 
 /** Escape sequence - Cursor forward (right) */
-static const char *escSeqCursorRight    = "\x1B[C";
+static const char *escSeqCursorRight = "\x1B[C";
 
 /** Escape sequence - Cursor backward (left) */
-static const char *escSeqCursorLeft     = "\x1B[D";
+static const char *escSeqCursorLeft = "\x1B[D";
 
 /** Escape sequence - Cursor save position */
-static const char *escSeqCursorSave     = "\x1B[s";
+static const char *escSeqCursorSave = "\x1B[s";
 
 /** Escape sequence - Cursor restore position */
-static const char *escSeqCursorRestore  = "\x1B[u";
+static const char *escSeqCursorRestore = "\x1B[u";
 
 /** Escape sequence - Cursor insert character */
-static const char *escSeqInsertChar     = "\x1B[@";
+static const char *escSeqInsertChar = "\x1B[@";
 
 /** Escape sequence - Cursor delete character */
-static const char *escSeqDeleteChar     = "\x1B[P";
+static const char *escSeqDeleteChar = "\x1B[P";
 
 /**
  * Navigate through command history back and forth. If navigateUp is true,
@@ -580,9 +580,8 @@ void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
     PREPARE_IMPL(cli);
 
     // remove chars for autocompletion and live command
-    if (!IS_FLAG_SET(impl->flags, CLI_FLAG_DIRECT_PRINT)){
+    if (!IS_FLAG_SET(impl->flags, CLI_FLAG_DIRECT_PRINT))
         clearCurrentLine(cli);
-    }
 
     // print provided string
     writeToOutput(cli, string);
