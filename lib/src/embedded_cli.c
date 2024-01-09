@@ -1040,9 +1040,7 @@ static void printLiveAutocompletion(EmbeddedCli *cli) {
     // save cursor location
     writeToOutput(cli, escSeqCursorSave);
 
-    if (impl->cursorPos > 0) {
-        moveCursor(cli, impl->cursorPos, CURSOR_DIRECTION_FORWARD);
-    }
+    moveCursor(cli, impl->cursorPos, CURSOR_DIRECTION_FORWARD);
 
     // print live autocompletion (or nothing, if it doesn't exist)
     for (size_t i = impl->cmdSize; i < cmd.autocompletedLen; ++i) {
@@ -1125,9 +1123,13 @@ static void writeToOutput(EmbeddedCli *cli, const char *str) {
 }
 
 static void moveCursor(EmbeddedCli* cli, uint16_t count, bool direction) {
+    // Check if we need to send any command
+    if (count == 0)
+        return;
+
     // 5 = uint16_t max, 3 = escape sequence, 1 = string termination
     char escBuffer[5 + 3 + 1] = { 0 };
-    char dirChar = direction ? escSeqCursorRight[5] : escSeqCursorLeft[5];
+    char dirChar = direction ? escSeqCursorRight[2] : escSeqCursorLeft[2];
     sprintf(escBuffer, "\x1B[%u%c", count, dirChar);
     writeToOutput(cli, escBuffer);
 }
