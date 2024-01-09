@@ -2,6 +2,7 @@
 #include "CliBuilder.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <algorithm>
 
 
 TEST_CASE("CLI. Base tests", "[cli]") {
@@ -141,6 +142,28 @@ TEST_CASE("CLI. Base tests", "[cli]") {
         REQUIRE(displayed.lines.size() == 1);
         REQUIRE(displayed.lines[0] == "> get both");
         REQUIRE(displayed.cursorColumn == 7);
+    }
+
+    SECTION("Command that is too long") {
+        size_t cmdMax = embeddedCliDefaultConfig()->cmdBufferSize;
+        std::string cmdMaxTest = std::string(cmdMax/2, 'x');
+
+        // Split command into two to prevent getting the fifo full
+        cli.send(cmdMaxTest);
+        cli.process();
+        cli.sendLine(cmdMaxTest);
+        cli.process();
+
+        auto displayed = cli.getDisplay();
+
+        auto xcount = std::ranges::count(cli.getRawOutput(), 'x');
+
+        REQUIRE(displayed.lines.size() == 2);
+        // We are only displaying (cmdMax - 2) 'x's, 
+        // but two additional characters are the invitation and the space
+        REQUIRE(displayed.lines[0].size() == cmdMax); 
+        // Check that the two extra x's will be dropped 
+        REQUIRE(xcount == cmdMax - 2);
     }
 
     SECTION("Unknown command") {
