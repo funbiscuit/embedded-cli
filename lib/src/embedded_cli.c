@@ -1128,7 +1128,7 @@ static void moveCursor(EmbeddedCli* cli, uint16_t count, bool direction) {
     // 5 = uint16_t max, 3 = escape sequence, 1 = string termination
     char escBuffer[5 + 3 + 1] = { 0 };
     char dirChar = direction ? escSeqCursorRight[5] : escSeqCursorLeft[5];
-    sprintf(&escBuffer, "\x1B[%u%c", count, dirChar);
+    sprintf(escBuffer, "\x1B[%u%c", count, dirChar);
     writeToOutput(cli, escBuffer);
 }
 
