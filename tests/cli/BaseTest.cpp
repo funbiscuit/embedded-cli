@@ -156,7 +156,9 @@ TEST_CASE("CLI. Base tests", "[cli]") {
 
         auto displayed = cli.getDisplay();
 
-        auto xcount = std::ranges::count(cli.getRawOutput(), 'x');
+        std::string cliRawOutput = cli.getRawOutput();
+
+        auto xcount = std::count(cliRawOutput.begin(), cliRawOutput.end(), 'x');
 
         REQUIRE(displayed.lines.size() == 2);
         // We are only displaying (cmdMax - 2) 'x's, 
