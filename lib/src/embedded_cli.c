@@ -579,9 +579,15 @@ void embeddedCliPrint(EmbeddedCli *cli, const char *string) {
 
     PREPARE_IMPL(cli);
 
+    // Save cursor position
+    uint16_t cursorPosSave = impl->cursorPos;
+
     // remove chars for autocompletion and live command
     if (!IS_FLAG_SET(impl->flags, CLI_FLAG_DIRECT_PRINT))
         clearCurrentLine(cli);
+
+    // Restore cursor position
+    impl->cursorPos = cursorPosSave;
 
     // print provided string
     writeToOutput(cli, string);
@@ -798,7 +804,7 @@ static void onControlInput(EmbeddedCli *cli, char c) {
         impl->cursorPos = 0;
 
         writeToOutput(cli, impl->invitation);
-    } else if ((c == '\b' || c == 0x7F) && impl->cmdSize > 0) {
+    } else if ((c == '\b' || c == 0x7F) && ((impl->cmdSize - impl->cursorPos) > 0)) {
         // remove char from screen
         writeToOutput(cli, escSeqCursorLeft); // Move cursor to left
         writeToOutput(cli, escSeqDeleteChar); // And remove character
@@ -1073,9 +1079,10 @@ static void onAutocompleteRequest(EmbeddedCli *cli) {
         }
         impl->cmdBuffer[cmd.autocompletedLen] = '\0';
 
-        writeToOutput(cli, &impl->cmdBuffer[impl->cmdSize]);
+        writeToOutput(cli, &impl->cmdBuffer[impl->cmdSize - impl->cursorPos]);
         impl->cmdSize = cmd.autocompletedLen;
         impl->inputLineLength = impl->cmdSize;
+        impl->cursorPos = 0; // Cursor has been moved to the end
         return;
     }
 
@@ -1112,6 +1119,8 @@ static void clearCurrentLine(EmbeddedCli *cli) {
     }
     cli->writeChar(cli, '\r');
     impl->inputLineLength = 0;
+
+    impl->cursorPos = 0;
 }
 
 static void writeToOutput(EmbeddedCli *cli, const char *str) {

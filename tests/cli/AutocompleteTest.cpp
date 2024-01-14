@@ -112,6 +112,17 @@ TEST_CASE("CLI. Autocomplete enabled", "[cli]") {
         REQUIRE(displayed.cursorColumn == 3);
     }
 
+    SECTION("Autocomplete when inside of input has been modified") {
+        cli.send("res");
+        cli.sendLine("\x1B[D\x1B[D"); // Move left two characters
+        cli.process();
+
+        auto displayed = cli.getDisplay();
+
+        REQUIRE(displayed.lines.size() == 2);
+        REQUIRE(displayed.lines[0] == "> reset-");
+    }
+
     SECTION("Live autocomplete when no candidates") {
         cli.send("m");
         cli.process();

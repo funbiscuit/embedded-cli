@@ -136,15 +136,16 @@ CliWrapper::Display CliWrapper::getDisplay() {
             }
 
             if (c == 'C') {
-                // At the moment, this is the only escape sequence that takes a count (number) before the command 
                 if (escapeSequenceCount.empty())
                     cursorPosition++;
                 else
                     cursorPosition += strtoul(escapeSequenceCount.c_str(), NULL, 10);
             }
             else if (c == 'D') {
-                if (cursorPosition > 0)
+                if (escapeSequenceCount.empty())
                     cursorPosition--;
+                else
+                    cursorPosition -= strtoul(escapeSequenceCount.c_str(), NULL, 10);
             }
             else if (c == 's') {
                 cursorPosSave = cursorPosition;

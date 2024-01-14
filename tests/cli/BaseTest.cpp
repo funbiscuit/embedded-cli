@@ -122,6 +122,19 @@ TEST_CASE("CLI. Base tests", "[cli]") {
         REQUIRE(displayed.cursorColumn == 8);
     }
 
+    SECTION("Move cursor left and remove some chars") {
+        cli.send("test");
+        cli.send("\x1B[D\x1B[D"); // Move left two characters
+        cli.send("\b\b\b\b\b"); // Try to delete more characters than remaining
+        cli.send("almo");
+        cli.process();
+
+        auto displayed = cli.getDisplay();
+
+        REQUIRE(displayed.lines.size() == 1);
+        REQUIRE(displayed.lines[0] == "> almost");
+    }
+
     SECTION("Move cursor right") {
         cli.send("get right\x1B[C\x1B[C");
         cli.process();
