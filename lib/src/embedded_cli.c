@@ -211,7 +211,10 @@ static const uint16_t cliInternalBindingCount = 1;
 
 static const char *lineBreak = "\r\n";
 
-/* Reference for VT100 escape sequences: https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences */
+/* References for VT100 escape sequences: 
+ * https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences 
+ * https://ecma-international.org/publications-and-standards/standards/ecma-48/
+ */
 
 /** Escape sequence - Cursor forward (right) */
 static const char *escSeqCursorRight = "\x1B[C";
@@ -225,10 +228,10 @@ static const char *escSeqCursorSave = "\x1B[s";
 /** Escape sequence - Cursor restore position */
 static const char *escSeqCursorRestore = "\x1B[u";
 
-/** Escape sequence - Cursor insert character */
+/** Escape sequence - Cursor insert character (ICH) */
 static const char *escSeqInsertChar = "\x1B[@";
 
-/** Escape sequence - Cursor delete character */
+/** Escape sequence - Cursor delete character (DCH) */
 static const char *escSeqDeleteChar = "\x1B[P";
 
 /**
