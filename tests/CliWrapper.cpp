@@ -67,6 +67,7 @@ void CliWrapper::addBinding(const std::string &name,
                 }
                 wrapper->onBoundCommand(cmd);
             },
+            .hidden = false,
     };
 
     if (embeddedCliAddBinding(cli, binding)) {

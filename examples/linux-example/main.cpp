@@ -55,28 +55,40 @@ int main() {
             "Stop CLI and exit",
             false,
             nullptr,
-            onExit
+            onExit,
+            false
     });
     embeddedCliAddBinding(cli, {
             "get-led",
             "Get current led status",
             false,
             nullptr,
-            onLed
+            onLed,
+            false
     });
     embeddedCliAddBinding(cli, {
             "get-adc",
             "Get current adc value",
             false,
             nullptr,
-            onAdc
+            onAdc,
+            false
     });
     embeddedCliAddBinding(cli, {
             "hello",
             "Print hello message",
             true,
             (void *) "World",
-            onHello
+            onHello,
+            false
+    });
+    embeddedCliAddBinding(cli, {
+            "quit",
+            "Stop CLI and exit",
+            false,
+            nullptr,
+            onExit,
+            true
     });
 
     std::cout << "Cli is running. Press 'Esc' to exit\r\n";

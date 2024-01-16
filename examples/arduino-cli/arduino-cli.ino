@@ -64,21 +64,24 @@ void setup() {
             "Get led status",
             false,
             nullptr,
-            onLed
+            onLed,
+            false
     });
     embeddedCliAddBinding(cli, {
             "get-adc",
             "Read adc value",
             false,
             nullptr,
-            onAdc
+            onAdc,
+            false
     });
     embeddedCliAddBinding(cli, {
             "hello",
             "Print hello message",
             true,
             (void *) "World",
-            onHello
+            onHello,
+            false
     });
 
     cli->onCommand = onCommand;
