@@ -2,6 +2,8 @@
 #include "CliWrapper.h"
 
 #include <stdexcept>
+#include <regex>
+#include <ctype.h>
 
 // expand implementation when single header version is tested
 #define EMBEDDED_CLI_IMPL
@@ -80,32 +82,96 @@ CliWrapper::Display CliWrapper::getDisplay() {
     std::vector<std::string> output;
 
     std::string line;
+    std::string escapeSequenceCount;
     size_t cursorPosition = 0;
+    
+    enum CharacterMode { NORMAL, ESCAPE_MODE_START, ESCAPE_MODE_START_PARSE };
+    CharacterMode charMode = NORMAL;
+    
+    // Variable for saving the cursor position
+    size_t cursorPosSave = 0;
 
     for (auto c: txQueue) {
-        if (c == '\b') {
-            if (cursorPosition > 0 && (cursorPosition - 1) < line.size()) {
-                line.erase(cursorPosition - 1, 1);
-                --cursorPosition;
+        switch (charMode) {
+        default:
+        case NORMAL:
+            if (c == '\x1B') {
+                charMode = ESCAPE_MODE_START;
+                // Clear the count in case it was constructed during the previous escape sequence
+                escapeSequenceCount.clear();
             }
-        } else if (c == '\r') {
-            cursorPosition = 0;
-        } else if (c == '\n') {
-            cursorPosition = 0;
-            output.push_back(line);
-            line.clear();
-        } else {
-            if (line.size() > cursorPosition) {
+            else if (c == '\b') {
+                if (cursorPosition > 0 && (cursorPosition - 1) < line.size()) {
+                    line.erase(cursorPosition - 1, 1);
+                    --cursorPosition;
+                }
+            }
+            else if (c == '\r') {
+                cursorPosition = 0;
+            }
+            else if (c == '\n') {
+                cursorPosition = 0;
+                output.push_back(line);
+                line.clear();
+            }
+            else {
+                if (line.size() > cursorPosition) {
+                    line.erase(cursorPosition, 1);
+                }
+                line.insert(cursorPosition, 1, c);
+                ++cursorPosition;
+            }
+            break;
+        case ESCAPE_MODE_START:
+            if (c == '[')
+                charMode = ESCAPE_MODE_START_PARSE;
+            else
+                charMode = NORMAL;
+            break;
+        case ESCAPE_MODE_START_PARSE:
+            // Check if the escape sequence has a count <n> associated with it, for example 'ESC[<n>C'
+            if (isdigit(c)) {
+                escapeSequenceCount.push_back(c);
+                break;
+            }
+
+            if (c == 'C') {
+                if (escapeSequenceCount.empty())
+                    cursorPosition++;
+                else
+                    cursorPosition += strtoul(escapeSequenceCount.c_str(), NULL, 10);
+            }
+            else if (c == 'D') {
+                if (escapeSequenceCount.empty())
+                    cursorPosition--;
+                else
+                    cursorPosition -= strtoul(escapeSequenceCount.c_str(), NULL, 10);
+            }
+            else if (c == 's') {
+                cursorPosSave = cursorPosition;
+            }
+            else if (c == 'u') {
+                cursorPosition = cursorPosSave;
+            }
+            else if (c == '@') {
+                line.insert(cursorPosition, 1, ' ');
+            }
+            else if (c == 'P') {
                 line.erase(cursorPosition, 1);
             }
-            line.insert(cursorPosition, 1, c);
-            ++cursorPosition;
+
+            // Return to normal mode
+            charMode = NORMAL;
+            
+            break;
         }
     }
+
     output.push_back(line);
 
     for (auto &l: output) {
         trimStr(l);
+        removeEscSeq(l);
     }
 
     return Display{
@@ -118,6 +184,7 @@ std::string CliWrapper::getRawOutput() {
     txQueue.push_back('\0');
     std::string output = txQueue.data();
     txQueue.pop_back();
+    removeEscSeq(output);
     return output;
 }
 
@@ -148,6 +215,12 @@ void CliWrapper::trimStr(std::string &str) {
     while (!str.empty() && str.back() == ' ') {
         str.pop_back();
     }
+}
+
+void CliWrapper::removeEscSeq(std::string& str) {
+    // Regex to find and delete escape sequences. NOTE This might need to be updated in the future
+    std::regex escapeSeqRe("\\x1b\\[[0-9]*[ABCDEFGM78dsu@PXLMJK]");
+    str = regex_replace(str, escapeSeqRe, "");
 }
 
 void CliWrapper::onBoundCommand(Command command) {

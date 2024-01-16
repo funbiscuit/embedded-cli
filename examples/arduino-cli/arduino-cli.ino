@@ -21,7 +21,7 @@
 #include "embedded_cli.h"
 
 // 164 bytes is minimum size for this params on Arduino Nano
-#define CLI_BUFFER_SIZE 164
+#define CLI_BUFFER_SIZE 166
 #define CLI_RX_BUFFER_SIZE 16
 #define CLI_CMD_BUFFER_SIZE 32
 #define CLI_HISTORY_SIZE 32

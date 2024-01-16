@@ -20,6 +20,7 @@ Single-header CLI library intended for use in embedded systems (like STM32 or Ar
 * Live autocompletion (see demo above, can be disabled)
 * Tab (jump to end of current autocompletion) and backspace (remove char) support
 * History support (navigate with up and down keypress)
+* Limited cursor support (navigate inside input with left and right keypress)
 * Any byte-stream interface is supported (for example, UART)
 * Single-header distribution
 
@@ -174,6 +175,7 @@ Terminal is required for correct experience. Following control sequences are res
 * \b removes last typed character
 * \t moves cursor to the end of autocompleted command
 * Esc[A (key up) and Esc[B (key down) navigates through history
+* Esc[C (key right) and Esc[D (key left) moves the cursor left and right
 
 If you run CLI through a serial port (like on Arduino with its UART-USB converter),
 you can use for example PuTTY (Windows) or XTerm (Linux).

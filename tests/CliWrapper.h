@@ -136,6 +136,12 @@ private:
     void onBoundCommand(Command command);
 
     static void trimStr(std::string &str);
+
+    /**
+     * Remove escape sequences from given string
+     * @param input string
+     */
+    static void removeEscSeq(std::string& str);
 };
 
 
