@@ -88,6 +88,15 @@ struct CliCommandBinding {
      * @param context
      */
     void (*binding)(EmbeddedCli *cli, char *args, void *context);
+
+    /**
+     * Allow a command to be hidden.  Hidden commands don't show up in help or autocomplete
+     * This is useful for command synonyms (e.g. supporting both "exit" and "quit") as well
+     * as hiding advanced commands.  Because this bit can be toggled, hidden commands can be
+     * made visible by changing the bit when desired.
+     */
+    bool hidden;
+
 };
 
 struct EmbeddedCli {

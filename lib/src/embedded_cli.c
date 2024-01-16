@@ -844,7 +844,8 @@ static void initInternalBindings(EmbeddedCli *cli) {
             "Print list of commands",
             true,
             NULL,
-            onHelp
+            onHelp,
+	    false
     };
     embeddedCliAddBinding(cli, b);
 }
@@ -862,10 +863,12 @@ static void onHelp(EmbeddedCli *cli, char *tokens, void *context) {
     uint16_t tokenCount = embeddedCliGetTokenCount(tokens);
     if (tokenCount == 0) {
         for (int i = 0; i < impl->bindingsCount; ++i) {
-            writeToOutput(cli, " * ");
-            writeToOutput(cli, impl->bindings[i].name);
-            writeToOutput(cli, lineBreak);
-            printBindingHelp(cli, &impl->bindings[i]);
+            if(!impl->bindings[i].hidden) {
+                writeToOutput(cli, " * ");
+                writeToOutput(cli, impl->bindings[i].name);
+                writeToOutput(cli, lineBreak);
+                printBindingHelp(cli, &impl->bindings[i]);
+            }
         }
     } else if (tokenCount == 1) {
         // try find command
@@ -918,6 +921,10 @@ static AutocompletedCommand getAutocompletedCommand(EmbeddedCli *cli, const char
     for (int i = 0; i < impl->bindingsCount; ++i) {
         const char *name = impl->bindings[i].name;
         size_t len = strlen(name);
+
+        // skip the command if it's hidden
+        if (impl->bindings[i].hidden)
+            continue;
 
         // unset autocomplete flag
         UNSET_U8FLAG(impl->bindingsFlags[i], BINDING_FLAG_AUTOCOMPLETE);

@@ -34,7 +34,8 @@ void initCliBinding() {
             .help = "Clears the console",
             .tokenizeArgs = true,
             .context = NULL,
-            .binding = onClearCLI
+            .binding = onClearCLI,
+            .hidden = false
     };
 
     // Command binding for the led command
@@ -43,7 +44,8 @@ void initCliBinding() {
             .help = "Get led status",
             .tokenizeArgs = true,
             .context = NULL,
-            .binding = onLed
+            .binding = onLed,
+            .hidden = false
     };
 
     EmbeddedCli *cli = getCliPointer();
