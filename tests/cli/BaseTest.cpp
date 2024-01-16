@@ -197,7 +197,8 @@ TEST_CASE("CLI. Base tests", "[cli]") {
                     .help = nullptr,
                     .tokenizeArgs = false,
                     .context = nullptr,
-                    .binding = nullptr
+                    .binding = nullptr,
+                    .hidden = false
             });
 
             cli.sendLine("get led");
