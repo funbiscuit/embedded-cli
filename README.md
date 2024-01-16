@@ -74,14 +74,16 @@ embeddedCliAddBinding(cli, {
         "Get led status",   // Optional help for a command (NULL for no help)
         false,              // flag whether to tokenize arguments (see below)
         nullptr,            // optional pointer to any application context
-        onLed               // binding function 
+        onLed,              // binding function 
+        false               // flag whether to hide the command from help and autocomplete
 });
 embeddedCliAddBinding(cli, {
         "get-adc",
         "Read adc value",
         true,
         nullptr,
-        onAdc
+        onAdc,
+        false
 });
 ```
 Don't forget to create binding functions as well:
