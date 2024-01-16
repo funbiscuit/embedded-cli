@@ -107,16 +107,26 @@ int main() {
 
             auto key = event.wVirtualKeyCode;
 
-            // key up and down
-            if (key == 38 || key == 40) {
+            // key up, down, left and right
+            if (key >= 37 && key <= 40) {
                 // send as escape sequence
                 embeddedCliReceiveChar(cli, '\x1B');
                 embeddedCliReceiveChar(cli, '[');
 
-                if (key == 38)
+                switch (key) {
+                case 38:
                     embeddedCliReceiveChar(cli, 'A');
-                else
+                    break;
+                case 40:
                     embeddedCliReceiveChar(cli, 'B');
+                    break;
+                case 37:
+                    embeddedCliReceiveChar(cli, 'D');
+                    break;
+                case 39:
+                    embeddedCliReceiveChar(cli, 'C');
+                    break;
+                }
             }
 
             char aChar = event.uChar.AsciiChar;

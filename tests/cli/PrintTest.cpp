@@ -8,6 +8,7 @@ TEST_CASE("CLI. Printing", "[cli]") {
     CliWrapper cli = CliBuilder().build();
 
     SECTION("Print with no command input") {
+        cli.process();
         cli.print("test print");
 
         auto display = cli.getDisplay();
@@ -59,6 +60,20 @@ TEST_CASE("CLI. Printing", "[cli]") {
         REQUIRE(displayed.lines.size() == 2);
         REQUIRE(displayed.lines[0] == "j");
         REQUIRE(displayed.lines[1] == "> get");
+        REQUIRE(displayed.cursorColumn == 3);
+    }
+
+    SECTION("Print with cursor in the middle of the input") {
+        cli.send("test");
+        cli.send("\x1B[D\x1B[D\x1B[D"); // Move left three characters
+        cli.process();
+        cli.print("print");
+
+        auto displayed = cli.getDisplay();
+
+        REQUIRE(displayed.lines.size() == 2);
+        REQUIRE(displayed.lines[0] == "print");
+        REQUIRE(displayed.lines[1] == "> test");
         REQUIRE(displayed.cursorColumn == 3);
     }
 }

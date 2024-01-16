@@ -2,6 +2,7 @@
 #include "CliBuilder.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <algorithm>
 
 
 TEST_CASE("CLI. Base tests", "[cli]") {
@@ -110,6 +111,76 @@ TEST_CASE("CLI. Base tests", "[cli]") {
         REQUIRE(commands.back().args[0] == "led");
     }
 
+    SECTION("Move cursor left") {
+        cli.send("get lft\x1B[D\x1B[De");
+        cli.process();
+
+        auto displayed = cli.getDisplay();
+
+        REQUIRE(displayed.lines.size() == 1);
+        REQUIRE(displayed.lines[0] == "> get left");
+        REQUIRE(displayed.cursorColumn == 8);
+    }
+
+    SECTION("Move cursor left and remove some chars") {
+        cli.send("test");
+        cli.send("\x1B[D\x1B[D"); // Move left two characters
+        cli.send("\b\b\b\b\b"); // Try to delete more characters than remaining
+        cli.send("almo");
+        cli.process();
+
+        auto displayed = cli.getDisplay();
+
+        REQUIRE(displayed.lines.size() == 1);
+        REQUIRE(displayed.lines[0] == "> almost");
+    }
+
+    SECTION("Move cursor right") {
+        cli.send("get right\x1B[C\x1B[C");
+        cli.process();
+
+        auto displayed = cli.getDisplay();
+
+        REQUIRE(displayed.lines.size() == 1);
+        REQUIRE(displayed.lines[0] == "> get right");
+        REQUIRE(displayed.cursorColumn == 11);
+    }
+
+    SECTION("Move cursor left then right") {
+        cli.send("ge oth\x1B[D\x1B[D\x1B[D\x1B[Dt\x1B[Cb");
+        cli.process();
+
+        auto displayed = cli.getDisplay();
+
+        REQUIRE(displayed.lines.size() == 1);
+        REQUIRE(displayed.lines[0] == "> get both");
+        REQUIRE(displayed.cursorColumn == 7);
+    }
+
+    SECTION("Command that is too long") {
+        size_t cmdMax = embeddedCliDefaultConfig()->cmdBufferSize;
+        std::string cmdMaxTest = std::string(cmdMax/2, 'x');
+
+        // Split command into two to prevent getting the fifo full
+        cli.send(cmdMaxTest);
+        cli.process();
+        cli.sendLine(cmdMaxTest);
+        cli.process();
+
+        auto displayed = cli.getDisplay();
+
+        std::string cliRawOutput = cli.getRawOutput();
+
+        auto xcount = std::count(cliRawOutput.begin(), cliRawOutput.end(), 'x');
+
+        REQUIRE(displayed.lines.size() == 2);
+        // We are only displaying (cmdMax - 2) 'x's, 
+        // but two additional characters are the invitation and the space
+        REQUIRE(displayed.lines[0].size() == cmdMax); 
+        // Check that the two extra x's will be dropped 
+        REQUIRE(xcount == cmdMax - 2);
+    }
+
     SECTION("Unknown command") {
         // unknown commands are only possible when onCommand callback is not set
         cli.raw()->onCommand = nullptr;
@@ -152,7 +223,7 @@ TEST_CASE("CLI. Base tests", "[cli]") {
 
     SECTION("Escape sequences") {
         SECTION("Escape sequences don't show up in output") {
-            cli.send("t\x1B[Ae\x1B[10As\x1B[Bt\x1B[C\x1B[D1");
+            cli.send("t\x1B[Ae\x1B[10As\x1B[Bt\x1B[D\x1B[C1");
             cli.process();
 
             auto displayed = cli.getDisplay();
