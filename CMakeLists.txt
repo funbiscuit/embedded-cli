@@ -4,6 +4,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake-modules")
 
 set(CMAKE_C_STANDARD 11)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 option(BUILD_TESTS "Build and run tests" OFF)
 option(TESTS_COV "Run coverage on tests" OFF)
 option(BUILD_SINGLE_HEADER "Build single-header version" OFF)
