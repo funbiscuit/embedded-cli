@@ -29,7 +29,7 @@ void onAdc(EmbeddedCli *cli, char *args, void *context);
 int main() {
     // Single character buffer for reading keystrokes
     unsigned char c;
-    
+
     // Structures to save the terminal settings for original settings & raw mode
     struct termios original_stdin;
     struct termios raw_stdin;
@@ -95,15 +95,15 @@ int main() {
 
     // restore terminal settings
     tcsetattr(STDIN_FILENO, TCSANOW, &original_stdin);
-    
+
     return 0;
 }
 
 void onCommand(const std::string &name, char *tokens) {
-    std::cout << "Received command: " << name << "\n";
+    std::cout << "Received command: " << name << "\r\n";
 
     for (int i = 0; i < embeddedCliGetTokenCount(tokens); ++i) {
-        std::cout << "Arg " << i << ": " << embeddedCliGetToken(tokens, i + 1) << "\n";
+        std::cout << "Arg " << i << ": " << embeddedCliGetToken(tokens, i + 1) << "\r\n";
     }
 }
 
